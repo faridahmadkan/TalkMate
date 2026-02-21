@@ -1,7 +1,6 @@
 const { Telegraf, Markup } = require('telegraf');
 const Groq = require('groq-sdk');
 const express = require('express');
-const rateLimit = require('telegraf-ratelimit');
 
 // Check environment variables
 if (!process.env.BOT_TOKEN || !process.env.GROQ_API_KEY) {
@@ -30,17 +29,6 @@ const userConversations = new Map();
 const userPreferences = new Map();
 const supportRequests = new Map();
 const userActivity = new Map();
-
-// Rate limiting
-const rateLimitConfig = {
-  window: 3000,
-  limit: 1,
-  onLimitExceeded: (ctx) => {
-    ctx.reply('⚠️ Please slow down! You\'re sending messages too quickly.');
-  }
-};
-
-bot.use(rateLimit(rateLimitConfig));
 
 // Available models
 const AVAILABLE_MODELS = [
@@ -257,83 +245,144 @@ bot.command('about', (ctx) => {
 
 // ================= CALLBACK HANDLERS =================
 
-bot.on('callback_query', async (ctx) => {
-  const data = ctx.callbackQuery.data;
-  await ctx.answerCallbackQuery();
+bot.action('start_chat', async (ctx) => {
+  await ctx.answerCbQuery();
+  await ctx.replyWithMarkdown('💬 **Ready to chat!** Just send me any message.');
+});
+
+bot.action('help_support', async (ctx) => {
+  await ctx.answerCbQuery();
+  await ctx.replyWithMarkdown(
+    '🆘 **Support Options**\n\n' +
+    '• Use /support to create a support ticket\n' +
+    '• Use /feedback to send feedback'
+  );
+});
+
+bot.action('about_bot', async (ctx) => {
+  await ctx.answerCbQuery();
+  await ctx.replyWithMarkdown(
+    `ℹ️ **About This Bot**\n\n` +
+    `Advanced AI assistant powered by Groq.\n\n` +
+    `**Developer:** Khan's AI Solutions\n` +
+    `**Version:** 2.0.0`
+  );
+});
+
+bot.action('settings', async (ctx) => {
+  await ctx.answerCbQuery();
+  await ctx.replyWithMarkdown(
+    '⚙️ **Settings**',
+    Markup.inlineKeyboard([
+      [Markup.button.callback('🤖 Change Model', 'change_model')],
+      [Markup.button.callback('🗑️ Clear History', 'confirm_clear')],
+      [Markup.button.callback('📊 View Stats', 'user_stats')],
+      [Markup.button.callback('🔙 Main Menu', 'main_menu')]
+    ])
+  );
+});
+
+bot.action('change_model', async (ctx) => {
+  await ctx.answerCbQuery();
   
-  if (data === 'start_chat') {
-    ctx.replyWithMarkdown('💬 **Ready to chat!** Just send me any message.');
-  }
-  else if (data === 'help_support') {
-    ctx.replyWithMarkdown(
-      '🆘 **Support Options**\n\n' +
-      '• Use /support to create a support ticket\n' +
-      '• Use /feedback to send feedback'
-    );
-  }
-  else if (data === 'about_bot') {
-    ctx.replyWithMarkdown(
-      `ℹ️ **About This Bot**\n\n` +
-      `Advanced AI assistant powered by Groq.\n\n` +
-      `**Developer:** Khan's AI Solutions\n` +
-      `**Version:** 2.0.0`
-    );
-  }
-  else if (data === 'settings') {
-    ctx.replyWithMarkdown(
-      '⚙️ **Settings**',
-      Markup.inlineKeyboard([
-        [Markup.button.callback('🤖 Change Model', 'change_model')],
-        [Markup.button.callback('🗑️ Clear History', 'confirm_clear')],
-        [Markup.button.callback('📊 View Stats', 'user_stats')]
-      ])
-    );
-  }
-  else if (data === 'change_model') {
-    const buttons = AVAILABLE_MODELS.map(model => 
-      [Markup.button.callback(`${model.name}`, `select_model_${model.id}`)]
-    );
+  const buttons = AVAILABLE_MODELS.map(model => 
+    [Markup.button.callback(`${model.name}`, `select_${model.id}`)]
+  );
+  buttons.push([Markup.button.callback('🔙 Back to Settings', 'settings')]);
+  
+  await ctx.editMessageText(
+    '🤖 **Select AI Model:**\n\nChoose a model:',
+    {
+      parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard: buttons }
+    }
+  );
+});
+
+// Handle model selection
+AVAILABLE_MODELS.forEach(model => {
+  bot.action(`select_${model.id}`, async (ctx) => {
+    await ctx.answerCbQuery(`Selected: ${model.name}`);
     
-    ctx.editMessageText(
-      '🤖 **Select AI Model:**',
-      {
-        parse_mode: 'Markdown',
-        reply_markup: { inline_keyboard: buttons }
-      }
-    );
-  }
-  else if (data.startsWith('select_model_')) {
-    const modelId = data.replace('select_model_', '');
     const userId = ctx.from.id;
-    
     if (!userPreferences.has(userId)) {
       userPreferences.set(userId, {});
     }
     const prefs = userPreferences.get(userId);
-    prefs.model = modelId;
+    prefs.model = model.id;
     
-    const selectedModel = AVAILABLE_MODELS.find(m => m.id === modelId);
-    
-    ctx.editMessageText(
-      `✅ **Model Changed!**\n\nNow using: **${selectedModel.name}**`,
-      { parse_mode: 'Markdown' }
+    await ctx.editMessageText(
+      `✅ **Model Changed!**\n\nNow using: **${model.name}**\n${model.description}`,
+      {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [Markup.button.callback('🔙 Back to Models', 'change_model')],
+            [Markup.button.callback('🏠 Main Menu', 'main_menu')]
+          ]
+        }
+      }
     );
-  }
-  else if (data === 'confirm_clear') {
-    userConversations.delete(ctx.from.id);
-    ctx.editMessageText('✅ Conversation history cleared!');
-  }
-  else if (data === 'user_stats') {
-    const userId = ctx.from.id;
-    const history = userConversations.get(userId) || [];
-    
-    ctx.editMessageText(
-      `📊 **Your Statistics**\n\n` +
-      `Messages: ${history.length}\n` +
-      `User ID: \`${userId}\``,
-      { parse_mode: 'Markdown' }
-    );
-  }
+  });
+});
+
+bot.action('confirm_clear', async (ctx) => {
+  await ctx.answerCbQuery();
+  await ctx.replyWithMarkdown(
+    '🗑️ **Clear Conversation History**\n\nAre you sure?',
+    Markup.inlineKeyboard([
+      [Markup.button.callback('✅ Yes, clear it', 'clear_history')],
+      [Markup.button.callback('❌ No, keep it', 'settings')]
+    ])
+  );
+});
+
+bot.action('clear_history', async (ctx) => {
+  await ctx.answerCbQuery('History cleared!');
+  userConversations.delete(ctx.from.id);
+  await ctx.editMessageText('✅ Conversation history cleared!');
+});
+
+bot.action('user_stats', async (ctx) => {
+  await ctx.answerCbQuery();
+  const userId = ctx.from.id;
+  const history = userConversations.get(userId) || [];
+  const preferences = userPreferences.get(userId) || { model: 'llama-3.3-70b-versatile' };
+  const activeModel = AVAILABLE_MODELS.find(m => m.id === preferences.model) || AVAILABLE_MODELS[0];
+  
+  await ctx.replyWithMarkdown(
+    `📊 **Your Statistics**\n\n` +
+    `**Total messages:** ${history.length}\n` +
+    `**Your messages:** ${history.filter(m => m.role === 'user').length}\n` +
+    `**AI responses:** ${history.filter(m => m.role === 'assistant').length}\n` +
+    `**Current model:** ${activeModel.name}\n` +
+    `**User ID:** \`${userId}\``,
+    Markup.inlineKeyboard([
+      [Markup.button.callback('🔙 Back to Settings', 'settings')]
+    ])
+  );
+});
+
+bot.action('main_menu', async (ctx) => {
+  await ctx.answerCbQuery();
+  
+  const welcome = `🌟 Welcome back! 🌟
+
+What would you like to do?`;
+
+  await ctx.replyWithMarkdown(welcome,
+    Markup.inlineKeyboard([
+      [Markup.button.callback('💬 Start Chatting', 'start_chat')],
+      [Markup.button.callback('🆘 Help & Support', 'help_support'), Markup.button.callback('ℹ️ About', 'about_bot')],
+      [Markup.button.callback('⚙️ Settings', 'settings')]
+    ])
+  );
+});
+
+// Catch all other actions
+bot.on('callback_query', async (ctx) => {
+  await ctx.answerCbQuery();
+  console.log('Unhandled action:', ctx.callbackQuery.data);
 });
 
 // ================= MESSAGE HANDLING =================
@@ -358,11 +407,11 @@ bot.on('text', async (ctx) => {
       userName: `${ctx.from.first_name} ${ctx.from.last_name || ''}`.trim()
     });
     
-    ctx.replyWithMarkdown(
+    await ctx.replyWithMarkdown(
       `✅ **Support ticket created!**\n\nTicket ID: \`${ticketId}\``
     );
     
-    notifyAdmins(
+    await notifyAdmins(
       `🆘 **New Support Ticket**\n\n` +
       `Ticket ID: \`${ticketId}\`\n` +
       `User: ${ctx.from.first_name}\n` +
@@ -376,9 +425,9 @@ bot.on('text', async (ctx) => {
   else if (state === 'awaiting_feedback' && userMessage !== '/cancel') {
     userPreferences.delete(`${userId}_state`);
     
-    ctx.replyWithMarkdown('✅ Thank you for your feedback!');
+    await ctx.replyWithMarkdown('✅ Thank you for your feedback!');
     
-    notifyAdmins(
+    await notifyAdmins(
       `📝 **New Feedback**\n\n` +
       `User: ${ctx.from.first_name}\n` +
       `Feedback: ${userMessage}`,
@@ -389,7 +438,7 @@ bot.on('text', async (ctx) => {
   
   else if (userMessage === '/cancel') {
     userPreferences.delete(`${userId}_state`);
-    ctx.reply('Operation cancelled.');
+    await ctx.reply('Operation cancelled.');
     return;
   }
   
