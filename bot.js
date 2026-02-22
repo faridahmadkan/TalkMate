@@ -1674,10 +1674,7 @@ bot.catch((err, ctx) => {
   ).catch(() => {});
 });
 
-// Handle polling errors
-bot.telegram.catch((err) => {
-  console.error('❌ Telegram API Error:', err);
-});
+// REMOVED THE PROBLEMATIC LINE: bot.telegram.catch is not a function
 
 // Start bot with auto-reconnect
 async function startBot() {
