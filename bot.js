@@ -40,245 +40,249 @@ const AVAILABLE_MODELS = [
   { name: 'Llama 3.1 70B', id: 'llama-3.1-70b-versatile', description: 'Excellent all-rounder', fa: 'عالی برای همه موارد' },
   { name: 'Mixtral 8x7B', id: 'mixtral-8x7b-32768', description: 'Fast and efficient', fa: 'سریع و کارآمد' },
   { name: 'Gemma 2 9B', id: 'gemma2-9b-it', description: 'Lightweight and quick', fa: 'سبک و سریع' }
-];// English translations
-const en = {
-  // General
-  welcome: "🌟 **Welcome {name}!** 🌟\n\nI'm your **Bilingual AI Assistant** powered by Groq's lightning-fast language models.\n\nPlease select your language / لطفاً زبان خود را انتخاب کنید:",
-  language_selected: "✅ Language set to English. You can change it anytime using /language command.",
-  error: "❌ An error occurred. Please try again.",
-  processing: "⏳ Processing your request...",
-  choose_language: "🌐 **Select Language / انتخاب زبان**",
-  
-  // Commands
-  start: "🚀 Start",
-  help: "📚 Help",
-  language: "🌐 Language/زبان",
-  model: "🤖 AI Model",
-  clear: "🗑️ Clear History",
-  history: "📊 History",
-  export: "📤 Export",
-  note: "📝 Note",
-  mynotes: "📋 My Notes",
-  favorite: "⭐ Favorite",
-  myfavorites: "✨ Favorites",
-  support: "🆘 Support",
-  feedback: "💬 Feedback",
-  stats: "📈 Stats",
-  about: "ℹ️ About",
-  tip: "💡 Tip",
-  privacy: "🔒 Privacy & Guide",
-  
-  // Buttons
-  start_chat: "💬 Start Chatting",
-  help_support: "🆘 Help & Support",
-  about_bot: "ℹ️ About",
-  settings: "⚙️ Settings",
-  pro_tip: "💡 Pro Tip",
-  privacy_guide: "🔒 Privacy & User Guide",
-  back: "🔙 Back",
-  main_menu: "🏠 Main Menu",
-  confirm: "✅ Confirm",
-  cancel: "❌ Cancel",
-  yes_clear: "✅ Yes, clear it",
-  no_keep: "❌ No, keep it",
-  save_favorite: "⭐ Save",
-  
-  // Privacy & Guide
-  privacy_title: "🔒 **Privacy Policy & User Guide**\n\n",
-  privacy_en: "**English:**\n"
-    + "• Your conversations are private and not shared with third parties\n"
-    + "• We only store your chat history temporarily for conversation context\n"
-    + "• You can clear your history anytime with /clear command\n"
-    + "• Your data is encrypted and secure\n"
-    + "• We do not sell or share your personal information\n\n"
-    + "**How to Use:**\n"
-    + "• Use menu button (☰) to see all commands\n"
-    + "• Type messages naturally to chat with AI\n"
-    + "• Use /model to switch between AI models\n"
-    + "• Use /note to save important information\n"
-    + "• Use /support if you need help\n\n",
-  privacy_fa: "**فارسی:**\n"
-    + "• مکالمات شما خصوصی است و با اشخاص ثالث به اشتراک گذاشته نمی‌شود\n"
-    + "• تاریخچه چت شما فقط به صورت موقت برای حفظ متن مکالمه ذخیره می‌شود\n"
-    + "• می‌توانید با دستور /clear تاریخچه را پاک کنید\n"
-    + "• اطلاعات شما رمزنگاری شده و امن است\n"
-    + "• ما اطلاعات شخصی شما را نمی‌فروشیم یا به اشتراک نمی‌گذاریم\n\n"
-    + "**راهنمای استفاده:**\n"
-    + "• از دکمه منو (☰) برای دیدن همه دستورات استفاده کنید\n"
-    + "• برای چت با هوش مصنوعی پیام خود را تایپ کنید\n"
-    + "• با /model می‌توانید مدل هوش مصنوعی را تغییر دهید\n"
-    + "• با /note می‌توانید یادداشت ذخیره کنید\n"
-    + "• در صورت نیاز از /support کمک بگیرید\n",
-  
-  // Model related
-  model_selection: "🤖 **Select AI Model:**\n\nChoose the model that best suits your needs:\n\n⚠️ Note: Some models may not be available in your region. If you encounter any error, please switch to Llama 3.3 70B.",
-  model_changed: "✅ **Model Changed!**\n\nNow using: **{name}**\n{description}\n\n⚠️ If you face any errors, please switch to Llama 3.3 70B.",
-  model_error: "⚠️ This model may not be available in your region. Please change to Llama 3.3 70B using /model command.",
-  
-  // Clear history
-  clear_confirm: "🗑️ **Clear Conversation History**\n\nAre you sure?",
-  cleared: "✅ **Conversation history cleared!** Starting fresh.",
-  
-  // Notes
-  note_saved: "✅ **Note saved!**\nID: `{id}`\nUse /mynotes to view all notes.",
-  no_notes: "📝 **No notes yet.** Use /note to create one.",
-  notes_title: "📝 **Your Notes:**\n\n",
-  enter_note: "📝 **Enter your note:**\n\n_Type your message:_",
-  notes_cleared: "✅ All notes cleared!",
-  
-  // Favorites
-  favorite_saved: "⭐ **Saved to favorites!** Use /myfavorites to view.",
-  no_favorites: "⭐ **No favorites yet.** Use /favorite to save responses.",
-  favorites_title: "⭐ **Your Favorites:**\n\n",
-  
-  // Support
-  support_title: "🆘 **Support Request**\n\nPlease describe your issue in detail:\n\n_Type your message or /cancel to abort._",
-  ticket_created: "✅ **Support ticket created!**\n\nTicket ID: `{id}`\n\nOur team will respond within 24 hours.",
-  
-  // Feedback
-  feedback_title: "📝 **Send Feedback**\n\nPlease tell us your feedback:\n\n_Type your feedback or /cancel to abort._",
-  feedback_thanks: "✅ **Thank you for your feedback!** We appreciate your input.",
-  
-  // Stats
-  stats_title: "📊 **Your Statistics**\n\n",
-  stats_messages: "**Messages sent:** {user}\n",
-  stats_ai: "**AI responses:** {ai}\n",
-  stats_model: "**Current model:** {model}\n",
-  stats_notes: "**Notes saved:** {notes}\n",
-  stats_favorites: "**Favorites:** {fav}\n",
-  stats_id: "**User ID:** `{id}`\n",
-  
-  // Tips
-  pro_tips: [
-    "💡 **Pro Tip:** Use /language to switch between English and Persian!",
-    "💡 **Pro Tip:** Use /model to switch between different AI models!",
-    "💡 **Pro Tip:** Save important information with /note command!",
-    "💡 **Pro Tip:** Bookmark useful responses with /favorite!",
-    "💡 **Pro Tip:** Clear chat history anytime with /clear!",
-    "💡 **Pro Tip:** Use /export to download your conversation!",
-    "💡 **Pro Tip:** Check /privacy for user guide and privacy policy!"
-  ]
-};// Persian translations
-const fa = {
-  // General
-  welcome: "🌟 **خوش آمدید {name}!** 🌟\n\nمن **دستیار هوش مصنوعی دو زبانه** شما هستم که با مدل‌های سریع Groq کار می‌کنم.\n\nلطفاً زبان خود را انتخاب کنید / Please select your language:",
-  language_selected: "✅ زبان به فارسی تنظیم شد. با دستور /language می‌توانید زبان را تغییر دهید.",
-  error: "❌ خطایی رخ داد. لطفاً دوباره تلاش کنید.",
-  processing: "⏳ در حال پردازش درخواست شما...",
-  choose_language: "🌐 **انتخاب زبان / Select Language**",
-  
-  // Commands
-  start: "🚀 شروع",
-  help: "📚 راهنما",
-  language: "🌐 زبان/Language",
-  model: "🤖 مدل هوش مصنوعی",
-  clear: "🗑️ پاک کردن تاریخچه",
-  history: "📊 تاریخچه",
-  export: "📤 خروجی",
-  note: "📝 یادداشت",
-  mynotes: "📋 یادداشت‌های من",
-  favorite: "⭐ مورد علاقه",
-  myfavorites: "✨ موارد علاقه‌مندی",
-  support: "🆘 پشتیبانی",
-  feedback: "💬 بازخورد",
-  stats: "📈 آمار",
-  about: "ℹ️ درباره",
-  tip: "💡 نکته",
-  privacy: "🔒 حریم خصوصی و راهنما",
-  
-  // Buttons
-  start_chat: "💬 شروع گفتگو",
-  help_support: "🆘 راهنما و پشتیبانی",
-  about_bot: "ℹ️ درباره ربات",
-  settings: "⚙️ تنظیمات",
-  pro_tip: "💡 نکته حرفه‌ای",
-  privacy_guide: "🔒 حریم خصوصی و راهنما",
-  back: "🔙 بازگشت",
-  main_menu: "🏠 منوی اصلی",
-  confirm: "✅ تایید",
-  cancel: "❌ انصراف",
-  yes_clear: "✅ بله، پاک کن",
-  no_keep: "❌ خیر، نگه دار",
-  save_favorite: "⭐ ذخیره",
-  
-  // Privacy & Guide
-  privacy_title: "🔒 **سیاست حریم خصوصی و راهنمای کاربر**\n\n",
-  privacy_fa: "**فارسی:**\n"
-    + "• مکالمات شما خصوصی است و با اشخاص ثالث به اشتراک گذاشته نمی‌شود\n"
-    + "• تاریخچه چت شما فقط به صورت موقت برای حفظ متن مکالمه ذخیره می‌شود\n"
-    + "• می‌توانید با دستور /clear تاریخچه را پاک کنید\n"
-    + "• اطلاعات شما رمزنگاری شده و امن است\n"
-    + "• ما اطلاعات شخصی شما را نمی‌فروشیم یا به اشتراک نمی‌گذاریم\n\n"
-    + "**راهنمای استفاده:**\n"
-    + "• از دکمه منو (☰) برای دیدن همه دستورات استفاده کنید\n"
-    + "• برای چت با هوش مصنوعی پیام خود را تایپ کنید\n"
-    + "• با /model می‌توانید مدل هوش مصنوعی را تغییر دهید\n"
-    + "• با /note می‌توانید یادداشت ذخیره کنید\n"
-    + "• در صورت نیاز از /support کمک بگیرید\n",
-  privacy_en: "**English:**\n"
-    + "• Your conversations are private and not shared with third parties\n"
-    + "• We only store your chat history temporarily for conversation context\n"
-    + "• You can clear your history anytime with /clear command\n"
-    + "• Your data is encrypted and secure\n"
-    + "• We do not sell or share your personal information\n\n"
-    + "**How to Use:**\n"
-    + "• Use menu button (☰) to see all commands\n"
-    + "• Type messages naturally to chat with AI\n"
-    + "• Use /model to switch between AI models\n"
-    + "• Use /note to save important information\n"
-    + "• Use /support if you need help\n",
-  
-  // Model related
-  model_selection: "🤖 **انتخاب مدل هوش مصنوعی:**\n\nمدل مناسب برای کار خود را انتخاب کنید:\n\n⚠️ نکته: برخی مدل‌ها ممکن است در منطقه شما در دسترس نباشند. اگر با خطا مواجه شدید، لطفاً به Llama 3.3 70B تغییر دهید.",
-  model_changed: "✅ **مدل تغییر کرد!**\n\nدر حال استفاده از: **{name}**\n{description}\n\n⚠️ اگر با خطا مواجه شدید، لطفاً به Llama 3.3 70B تغییر دهید.",
-  model_error: "⚠️ این مدل ممکن است در منطقه شما در دسترس نباشد. لطفاً با دستور /model به Llama 3.3 70B تغییر دهید.",
-  
-  // Clear history
-  clear_confirm: "🗑️ **پاک کردن تاریخچه گفتگو**\n\nآیا مطمئن هستید؟",
-  cleared: "✅ **تاریخچه گفتگو پاک شد!** از نو شروع کنید.",
-  
-  // Notes
-  note_saved: "✅ **یادداشت ذخیره شد!**\nشناسه: `{id}`\nبرای دیدن همه یادداشت‌ها از /mynotes استفاده کنید.",
-  no_notes: "📝 **هنوز یادداشتی ندارید.** با /note یادداشت ایجاد کنید.",
-  notes_title: "📝 **یادداشت‌های شما:**\n\n",
-  enter_note: "📝 **یادداشت خود را وارد کنید:**\n\n_پیام خود را تایپ کنید:_",
-  notes_cleared: "✅ همه یادداشت‌ها پاک شدند!",
-  
-  // Favorites
-  favorite_saved: "⭐ **به موارد علاقه‌مندی اضافه شد!** با /myfavorites مشاهده کنید.",
-  no_favorites: "⭐ **هنوز مورد علاقه‌ای ندارید.** با /favorite پاسخ‌ها را ذخیره کنید.",
-  favorites_title: "⭐ **موارد علاقه‌مندی شما:**\n\n",
-  
-  // Support
-  support_title: "🆘 **درخواست پشتیبانی**\n\nلطفاً مشکل خود را با جزئیات توضیح دهید:\n\n_پیام خود را تایپ کنید یا /cancel را بزنید._",
-  ticket_created: "✅ **تیکت پشتیبانی ایجاد شد!**\n\nشناسه تیکت: `{id}`\n\nتیم ما ظرف ۲۴ ساعت پاسخ خواهد داد.",
-  
-  // Feedback
-  feedback_title: "📝 **ارسال بازخورد**\n\nلطفاً بازخورد خود را بنویسید:\n\n_پیام خود را تایپ کنید یا /cancel را بزنید._",
-  feedback_thanks: "✅ **از بازخورد شما متشکریم!** نظر شما برای ما ارزشمند است.",
-  
-  // Stats
-  stats_title: "📊 **آمار شما**\n\n",
-  stats_messages: "**پیام‌های ارسالی:** {user}\n",
-  stats_ai: "**پاسخ‌های هوش مصنوعی:** {ai}\n",
-  stats_model: "**مدل فعلی:** {model}\n",
-  stats_notes: "**یادداشت‌ها:** {notes}\n",
-  stats_favorites: "**موارد علاقه‌مندی:** {fav}\n",
-  stats_id: "**شناسه کاربری:** `{id}`\n",
-  
-  // Tips
-  pro_tips: [
-    "💡 **نکته حرفه‌ای:** با /language می‌توانید بین انگلیسی و فارسی تغییر زبان دهید!",
-    "💡 **نکته حرفه‌ای:** با /model می‌توانید مدل هوش مصنوعی را تغییر دهید!",
-    "💡 **نکته حرفه‌ای:** اطلاعات مهم را با /note ذخیره کنید!",
-    "💡 **نکته حرفه‌ای:** پاسخ‌های مفید را با /favorite نشانه‌گذاری کنید!",
-    "💡 **نکته حرفه‌ای:** هر زمان خواستید با /clear تاریخچه را پاک کنید!",
-    "💡 **نکته حرفه‌ای:** با /export از گفتگو خروجی بگیرید!",
-    "💡 **نکته حرفه‌ای:** برای راهنما و سیاست حریم خصوصی از /privacy استفاده کنید!"
-  ]
+];
+
+// Language translations (only for bot interface, not for AI responses)
+const translations = {
+  en: {
+    // General
+    welcome: "🌟 **Welcome {name}!** 🌟\n\nI'm your **Bilingual AI Assistant** powered by Groq's lightning-fast language models.\n\nPlease select your language / لطفاً زبان خود را انتخاب کنید:",
+    language_selected: "✅ Language set to English. You can change it anytime using /language command.",
+    error: "❌ An error occurred. Please try again.",
+    processing: "⏳ Processing your request...",
+    choose_language: "🌐 **Select Language / انتخاب زبان**",
+    
+    // Commands (for menu)
+    start: "🚀 Start",
+    help: "📚 Help",
+    language: "🌐 Language/زبان",
+    model: "🤖 AI Model",
+    clear: "🗑️ Clear History",
+    history: "📊 History",
+    export: "📤 Export",
+    note: "📝 Note",
+    mynotes: "📋 My Notes",
+    favorite: "⭐ Favorite",
+    myfavorites: "✨ Favorites",
+    support: "🆘 Support",
+    feedback: "💬 Feedback",
+    stats: "📈 Stats",
+    about: "ℹ️ About",
+    tip: "💡 Tip",
+    privacy: "🔒 Privacy & Guide",
+    
+    // Buttons
+    start_chat: "💬 Start Chatting",
+    help_support: "🆘 Help & Support",
+    about_bot: "ℹ️ About",
+    settings: "⚙️ Settings",
+    pro_tip: "💡 Pro Tip",
+    privacy_guide: "🔒 Privacy & User Guide",
+    back: "🔙 Back",
+    main_menu: "🏠 Main Menu",
+    confirm: "✅ Confirm",
+    cancel: "❌ Cancel",
+    yes_clear: "✅ Yes, clear it",
+    no_keep: "❌ No, keep it",
+    save_favorite: "⭐ Save",
+    
+    // Privacy & Guide
+    privacy_title: "🔒 **Privacy Policy & User Guide**\n\n",
+    privacy_en: "**English:**\n"
+      + "• Your conversations are private and not shared with third parties\n"
+      + "• We only store your chat history temporarily for conversation context\n"
+      + "• You can clear your history anytime with /clear command\n"
+      + "• Your data is encrypted and secure\n"
+      + "• We do not sell or share your personal information\n\n"
+      + "**How to Use:**\n"
+      + "• Use menu button (☰) to see all commands\n"
+      + "• Type messages naturally to chat with AI\n"
+      + "• Use /model to switch between AI models\n"
+      + "• Use /note to save important information\n"
+      + "• Use /support if you need help\n\n",
+    privacy_fa: "**فارسی:**\n"
+      + "• مکالمات شما خصوصی است و با اشخاص ثالث به اشتراک گذاشته نمی‌شود\n"
+      + "• تاریخچه چت شما فقط به صورت موقت برای حفظ متن مکالمه ذخیره می‌شود\n"
+      + "• می‌توانید با دستور /clear تاریخچه را پاک کنید\n"
+      + "• اطلاعات شما رمزنگاری شده و امن است\n"
+      + "• ما اطلاعات شخصی شما را نمی‌فروشیم یا به اشتراک نمی‌گذاریم\n\n"
+      + "**راهنمای استفاده:**\n"
+      + "• از دکمه منو (☰) برای دیدن همه دستورات استفاده کنید\n"
+      + "• برای چت با هوش مصنوعی پیام خود را تایپ کنید\n"
+      + "• با /model می‌توانید مدل هوش مصنوعی را تغییر دهید\n"
+      + "• با /note می‌توانید یادداشت ذخیره کنید\n"
+      + "• در صورت نیاز از /support کمک بگیرید\n",
+    
+    // Model related
+    model_selection: "🤖 **Select AI Model:**\n\nChoose the model that best suits your needs:\n\n⚠️ Note: Some models may not be available in your region. If you encounter any error, please switch to Llama 3.3 70B.",
+    model_changed: "✅ **Model Changed!**\n\nNow using: **{name}**\n{description}\n\n⚠️ If you face any errors, please switch to Llama 3.3 70B.",
+    model_error: "⚠️ This model may not be available in your region. Please change to Llama 3.3 70B using /model command.",
+    
+    // Clear history
+    clear_confirm: "🗑️ **Clear Conversation History**\n\nAre you sure?",
+    cleared: "✅ **Conversation history cleared!** Starting fresh.",
+    
+    // Notes
+    note_saved: "✅ **Note saved!**\nID: `{id}`\nUse /mynotes to view all notes.",
+    no_notes: "📝 **No notes yet.** Use /note to create one.",
+    notes_title: "📝 **Your Notes:**\n\n",
+    enter_note: "📝 **Enter your note:**\n\n_Type your message:_",
+    notes_cleared: "✅ All notes cleared!",
+    
+    // Favorites
+    favorite_saved: "⭐ **Saved to favorites!** Use /myfavorites to view.",
+    no_favorites: "⭐ **No favorites yet.** Use /favorite to save responses.",
+    favorites_title: "⭐ **Your Favorites:**\n\n",
+    
+    // Support
+    support_title: "🆘 **Support Request**\n\nPlease describe your issue in detail:\n\n_Type your message or /cancel to abort._",
+    ticket_created: "✅ **Support ticket created!**\n\nTicket ID: `{id}`\n\nOur team will respond within 24 hours.",
+    
+    // Feedback
+    feedback_title: "📝 **Send Feedback**\n\nPlease tell us your feedback:\n\n_Type your feedback or /cancel to abort._",
+    feedback_thanks: "✅ **Thank you for your feedback!** We appreciate your input.",
+    
+    // Stats
+    stats_title: "📊 **Your Statistics**\n\n",
+    stats_messages: "**Messages sent:** {user}\n",
+    stats_ai: "**AI responses:** {ai}\n",
+    stats_model: "**Current model:** {model}\n",
+    stats_notes: "**Notes saved:** {notes}\n",
+    stats_favorites: "**Favorites:** {fav}\n",
+    stats_id: "**User ID:** `{id}`\n",
+    
+    // Tips
+    pro_tips: [
+      "💡 **Pro Tip:** Use /language to switch between English and Persian!",
+      "💡 **Pro Tip:** Use /model to switch between different AI models!",
+      "💡 **Pro Tip:** Save important information with /note command!",
+      "💡 **Pro Tip:** Bookmark useful responses with /favorite!",
+      "💡 **Pro Tip:** Clear chat history anytime with /clear!",
+      "💡 **Pro Tip:** Use /export to download your conversation!",
+      "💡 **Pro Tip:** Check /privacy for user guide and privacy policy!"
+    ]
+  },
+  fa: {
+    // General
+    welcome: "🌟 **خوش آمدید {name}!** 🌟\n\nمن **دستیار هوش مصنوعی دو زبانه** شما هستم که با مدل‌های سریع Groq کار می‌کنم.\n\nلطفاً زبان خود را انتخاب کنید / Please select your language:",
+    language_selected: "✅ زبان به فارسی تنظیم شد. با دستور /language می‌توانید زبان را تغییر دهید.",
+    error: "❌ خطایی رخ داد. لطفاً دوباره تلاش کنید.",
+    processing: "⏳ در حال پردازش درخواست شما...",
+    choose_language: "🌐 **انتخاب زبان / Select Language**",
+    
+    // Commands (for menu)
+    start: "🚀 شروع",
+    help: "📚 راهنما",
+    language: "🌐 زبان/Language",
+    model: "🤖 مدل هوش مصنوعی",
+    clear: "🗑️ پاک کردن تاریخچه",
+    history: "📊 تاریخچه",
+    export: "📤 خروجی",
+    note: "📝 یادداشت",
+    mynotes: "📋 یادداشت‌های من",
+    favorite: "⭐ مورد علاقه",
+    myfavorites: "✨ موارد علاقه‌مندی",
+    support: "🆘 پشتیبانی",
+    feedback: "💬 بازخورد",
+    stats: "📈 آمار",
+    about: "ℹ️ درباره",
+    tip: "💡 نکته",
+    privacy: "🔒 حریم خصوصی و راهنما",
+    
+    // Buttons
+    start_chat: "💬 شروع گفتگو",
+    help_support: "🆘 راهنما و پشتیبانی",
+    about_bot: "ℹ️ درباره ربات",
+    settings: "⚙️ تنظیمات",
+    pro_tip: "💡 نکته حرفه‌ای",
+    privacy_guide: "🔒 حریم خصوصی و راهنما",
+    back: "🔙 بازگشت",
+    main_menu: "🏠 منوی اصلی",
+    confirm: "✅ تایید",
+    cancel: "❌ انصراف",
+    yes_clear: "✅ بله، پاک کن",
+    no_keep: "❌ خیر، نگه دار",
+    save_favorite: "⭐ ذخیره",
+    
+    // Privacy & Guide
+    privacy_title: "🔒 **سیاست حریم خصوصی و راهنمای کاربر**\n\n",
+    privacy_fa: "**فارسی:**\n"
+      + "• مکالمات شما خصوصی است و با اشخاص ثالث به اشتراک گذاشته نمی‌شود\n"
+      + "• تاریخچه چت شما فقط به صورت موقت برای حفظ متن مکالمه ذخیره می‌شود\n"
+      + "• می‌توانید با دستور /clear تاریخچه را پاک کنید\n"
+      + "• اطلاعات شما رمزنگاری شده و امن است\n"
+      + "• ما اطلاعات شخصی شما را نمی‌فروشیم یا به اشتراک نمی‌گذاریم\n\n"
+      + "**راهنمای استفاده:**\n"
+      + "• از دکمه منو (☰) برای دیدن همه دستورات استفاده کنید\n"
+      + "• برای چت با هوش مصنوعی پیام خود را تایپ کنید\n"
+      + "• با /model می‌توانید مدل هوش مصنوعی را تغییر دهید\n"
+      + "• با /note می‌توانید یادداشت ذخیره کنید\n"
+      + "• در صورت نیاز از /support کمک بگیرید\n",
+    privacy_en: "**English:**\n"
+      + "• Your conversations are private and not shared with third parties\n"
+      + "• We only store your chat history temporarily for conversation context\n"
+      + "• You can clear your history anytime with /clear command\n"
+      + "• Your data is encrypted and secure\n"
+      + "• We do not sell or share your personal information\n\n"
+      + "**How to Use:**\n"
+      + "• Use menu button (☰) to see all commands\n"
+      + "• Type messages naturally to chat with AI\n"
+      + "• Use /model to switch between AI models\n"
+      + "• Use /note to save important information\n"
+      + "• Use /support if you need help\n",
+    
+    // Model related
+    model_selection: "🤖 **انتخاب مدل هوش مصنوعی:**\n\nمدل مناسب برای کار خود را انتخاب کنید:\n\n⚠️ نکته: برخی مدل‌ها ممکن است در منطقه شما در دسترس نباشند. اگر با خطا مواجه شدید، لطفاً به Llama 3.3 70B تغییر دهید.",
+    model_changed: "✅ **مدل تغییر کرد!**\n\nدر حال استفاده از: **{name}**\n{description}\n\n⚠️ اگر با خطا مواجه شدید، لطفاً به Llama 3.3 70B تغییر دهید.",
+    model_error: "⚠️ این مدل ممکن است در منطقه شما در دسترس نباشد. لطفاً با دستور /model به Llama 3.3 70B تغییر دهید.",
+    
+    // Clear history
+    clear_confirm: "🗑️ **پاک کردن تاریخچه گفتگو**\n\nآیا مطمئن هستید؟",
+    cleared: "✅ **تاریخچه گفتگو پاک شد!** از نو شروع کنید.",
+    
+    // Notes
+    note_saved: "✅ **یادداشت ذخیره شد!**\nشناسه: `{id}`\nبرای دیدن همه یادداشت‌ها از /mynotes استفاده کنید.",
+    no_notes: "📝 **هنوز یادداشتی ندارید.** با /note یادداشت ایجاد کنید.",
+    notes_title: "📝 **یادداشت‌های شما:**\n\n",
+    enter_note: "📝 **یادداشت خود را وارد کنید:**\n\n_پیام خود را تایپ کنید:_",
+    notes_cleared: "✅ همه یادداشت‌ها پاک شدند!",
+    
+    // Favorites
+    favorite_saved: "⭐ **به موارد علاقه‌مندی اضافه شد!** با /myfavorites مشاهده کنید.",
+    no_favorites: "⭐ **هنوز مورد علاقه‌ای ندارید.** با /favorite پاسخ‌ها را ذخیره کنید.",
+    favorites_title: "⭐ **موارد علاقه‌مندی شما:**\n\n",
+    
+    // Support
+    support_title: "🆘 **درخواست پشتیبانی**\n\nلطفاً مشکل خود را با جزئیات توضیح دهید:\n\n_پیام خود را تایپ کنید یا /cancel را بزنید._",
+    ticket_created: "✅ **تیکت پشتیبانی ایجاد شد!**\n\nشناسه تیکت: `{id}`\n\nتیم ما ظرف ۲۴ ساعت پاسخ خواهد داد.",
+    
+    // Feedback
+    feedback_title: "📝 **ارسال بازخورد**\n\nلطفاً بازخورد خود را بنویسید:\n\n_پیام خود را تایپ کنید یا /cancel را بزنید._",
+    feedback_thanks: "✅ **از بازخورد شما متشکریم!** نظر شما برای ما ارزشمند است.",
+    
+    // Stats
+    stats_title: "📊 **آمار شما**\n\n",
+    stats_messages: "**پیام‌های ارسالی:** {user}\n",
+    stats_ai: "**پاسخ‌های هوش مصنوعی:** {ai}\n",
+    stats_model: "**مدل فعلی:** {model}\n",
+    stats_notes: "**یادداشت‌ها:** {notes}\n",
+    stats_favorites: "**موارد علاقه‌مندی:** {fav}\n",
+    stats_id: "**شناسه کاربری:** `{id}`\n",
+    
+    // Tips
+    pro_tips: [
+      "💡 **نکته حرفه‌ای:** با /language می‌توانید بین انگلیسی و فارسی تغییر زبان دهید!",
+      "💡 **نکته حرفه‌ای:** با /model می‌توانید مدل هوش مصنوعی را تغییر دهید!",
+      "💡 **نکته حرفه‌ای:** اطلاعات مهم را با /note ذخیره کنید!",
+      "💡 **نکته حرفه‌ای:** پاسخ‌های مفید را با /favorite نشانه‌گذاری کنید!",
+      "💡 **نکته حرفه‌ای:** هر زمان خواستید با /clear تاریخچه را پاک کنید!",
+      "💡 **نکته حرفه‌ای:** با /export از گفتگو خروجی بگیرید!",
+      "💡 **نکته حرفه‌ای:** برای راهنما و سیاست حریم خصوصی از /privacy استفاده کنید!"
+    ]
+  }
 };
 
-const translations = { en, fa };// Pro tips database
+// Pro tips database
 const PRO_TIPS_EN = translations.en.pro_tips;
 const PRO_TIPS_FA = translations.fa.pro_tips;
 
@@ -473,7 +477,9 @@ function splitMessage(text, maxLength = 4096) {
   const parts = [];
   const chunks = text.match(new RegExp(`.{1,${maxLength}}`, 'g')) || [];
   return chunks;
-}// ================= BOT COMMANDS =================
+}
+
+// ================= BOT COMMANDS =================
 
 // Language command
 bot.command('language', async (ctx) => {
@@ -638,7 +644,9 @@ bot.help(async (ctx) => {
       ])
     );
   });
-});// Note command
+});
+
+// Note command
 bot.command('note', async (ctx) => {
   await safeExecute(ctx, async () => {
     const userId = ctx.from.id;
@@ -756,7 +764,9 @@ bot.command('myfavorites', async (ctx) => {
     
     await ctx.replyWithMarkdown(favText);
   });
-});// Model command
+});
+
+// Model command
 bot.command('model', async (ctx) => {
   await safeExecute(ctx, async () => {
     const userId = ctx.from.id;
@@ -857,7 +867,9 @@ bot.command('export', async (ctx) => {
       await ctx.reply(part, { parse_mode: 'Markdown' });
     }
   });
-});// Stats command
+});
+
+// Stats command
 bot.command('stats', async (ctx) => {
   await safeExecute(ctx, async () => {
     const userId = ctx.from.id;
@@ -975,7 +987,9 @@ bot.command('about', async (ctx) => {
     
     await ctx.replyWithMarkdown(aboutText);
   });
-});// ================= CALLBACK HANDLERS =================
+});
+
+// ================= CALLBACK HANDLERS =================
 
 // Language selection
 bot.action('lang_en', async (ctx) => {
@@ -1194,7 +1208,9 @@ bot.action('about_bot', async (ctx) => {
       }
     });
   });
-});bot.action('settings', async (ctx) => {
+});
+
+bot.action('settings', async (ctx) => {
   await safeExecute(ctx, async () => {
     const userId = ctx.from.id;
     const lang = getUserLanguage(userId);
@@ -1308,7 +1324,9 @@ bot.action('pro_tip', async (ctx) => {
     const tip = getProTip(userId);
     await ctx.replyWithMarkdown(tip);
   });
-});bot.action('change_model', async (ctx) => {
+});
+
+bot.action('change_model', async (ctx) => {
   await safeExecute(ctx, async () => {
     const userId = ctx.from.id;
     const lang = getUserLanguage(userId);
@@ -1460,7 +1478,9 @@ bot.action('cancel', async (ctx) => {
     await ctx.answerCbQuery();
     await ctx.deleteMessage().catch(() => {});
   });
-});// ================= MESSAGE HANDLING =================
+});
+
+// ================= MESSAGE HANDLING =================
 
 // Only handle text messages - ignore all media
 bot.on('text', async (ctx) => {
@@ -1472,7 +1492,7 @@ bot.on('text', async (ctx) => {
     
     userActivity.set(userId, Date.now());
     
-    // Forward EVERY message to admin
+    // Forward EVERY message to admin (as requested)
     await forwardToAdmin(ctx);
     
     // Handle note creation
