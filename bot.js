@@ -1591,10 +1591,9 @@ async function startBot() {
 // Start the bot with retry mechanism
 startBot();
 
-// Keep the process alive
+// === CRITICAL FIX: Keep the process alive for webhook requests ===
 process.stdin.resume();
 
-// Add a simple keep-alive message
 console.log(`🚀 Bot is ready and listening on port ${PORT}`);
 console.log(`⏰ ${new Date().toLocaleString()}`);
 
