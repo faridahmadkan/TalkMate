@@ -29,10 +29,13 @@ app.listen(PORT, '0.0.0.0', () => console.log(`✅ Server on port ${PORT}`));
 // In-memory storage
 const userConversations = new Map();
 const userPreferences = new Map(); // Stores language and model preferences
-const supportRequests = new Map();
+const supportRequests = new Map(); // Stores support tickets with conversation history
 const userActivity = new Map();
 const userNotes = new Map();
 const userFavorites = new Map();
+
+// Track which admin is replying to which ticket
+const adminReplyState = new Map(); // adminId -> { ticketId, userId }
 
 // Available models
 const AVAILABLE_MODELS = [
@@ -86,7 +89,26 @@ const translations = {
     no_keep: "❌ No, keep it",
     save_favorite: "⭐ Save",
     
-    // Privacy & Guide
+    // Support Ticket related
+    ticket_created: "✅ **Support ticket created!**\n\nTicket ID: `{id}`\n\nOur team will respond within 24 hours. You will receive replies here.",
+    ticket_reply_received: "📨 **New reply to your ticket #{id}**\n\n{reply}\n\n_Use /support to create a new ticket if needed._",
+    ticket_closed: "✅ **Ticket #{id} has been closed.**\n\nThank you for contacting support. Use /support if you need further assistance.",
+    ticket_status: "📊 **Ticket #{id} Status:** {status}\n\n**Created:** {created}\n**Last updated:** {updated}\n**Messages:** {count}",
+    no_tickets: "📭 You don't have any support tickets yet. Use /support to create one.",
+    
+    // Admin commands
+    admin_reply_instruction: "✏️ **Reply to ticket #{id}**\n\nUser: {user}\n\nType your reply below or use /cancel to abort.",
+    admin_ticket_reply_sent: "✅ Reply sent to user for ticket #{id}",
+    admin_no_ticket: "❌ Ticket not found or already closed.",
+    admin_ticket_list: "📋 **Open Tickets:**\n\n{tickets}\n\nTo reply to a ticket, forward me any message from that ticket and I'll let you reply.",
+    admin_ticket_item: "• #{id} - {user} - {time}\n  {preview}\n",
+    admin_close_ticket: "🔒 Close Ticket",
+    admin_ticket_closed: "✅ Ticket #{id} has been closed.",
+    
+    // Help text additions
+    admin_help: "\n\n**👤 Admin Commands:**\n/tickets - View all open tickets\n/close [ticket_id] - Close a ticket",
+    
+    // Rest of your existing translations...
     privacy_title: "🔒 **Privacy Policy & User Guide**\n\n",
     privacy_en: "**English:**\n"
       + "• Your conversations are private and not shared with third parties\n"
@@ -136,7 +158,6 @@ const translations = {
     
     // Support
     support_title: "🆘 **Support Request**\n\nPlease describe your issue in detail:\n\n_Type your message or /cancel to abort._",
-    ticket_created: "✅ **Support ticket created!**\n\nTicket ID: `{id}`\n\nOur team will respond within 24 hours.",
     
     // Feedback
     feedback_title: "📝 **Send Feedback**\n\nPlease tell us your feedback:\n\n_Type your feedback or /cancel to abort._",
@@ -204,7 +225,26 @@ const translations = {
     no_keep: "❌ خیر، نگه دار",
     save_favorite: "⭐ ذخیره",
     
-    // Privacy & Guide
+    // Support Ticket related
+    ticket_created: "✅ **تیکت پشتیبانی ایجاد شد!**\n\nشناسه تیکت: `{id}`\n\nتیم ما ظرف ۲۴ ساعت پاسخ خواهد داد. پاسخ‌ها در همینجا ارسال می‌شوند.",
+    ticket_reply_received: "📨 **پاسخ جدید به تیکت شما #{id}**\n\n{reply}\n\n_در صورت نیاز از /support استفاده کنید._",
+    ticket_closed: "✅ **تیکت #{id} بسته شد.**\n\nاز تماس شما متشکریم. در صورت نیاز از /support استفاده کنید.",
+    ticket_status: "📊 **وضعیت تیکت #{id}:** {status}\n\n**ایجاد:** {created}\n**آخرین به‌روزرسانی:** {updated}\n**پیام‌ها:** {count}",
+    no_tickets: "📭 شما هیچ تیکت پشتیبانی ندارید. با /support تیکت ایجاد کنید.",
+    
+    // Admin commands
+    admin_reply_instruction: "✏️ **پاسخ به تیکت #{id}**\n\nکاربر: {user}\n\nپاسخ خود را بنویسید یا /cancel را بزنید.",
+    admin_ticket_reply_sent: "✅ پاسخ به کاربر برای تیکت #{id} ارسال شد",
+    admin_no_ticket: "❌ تیکت یافت نشد یا قبلاً بسته شده است.",
+    admin_ticket_list: "📋 **تیکت‌های باز:**\n\n{tickets}\n\nبرای پاسخ، هر پیامی از آن تیکت را فوروارد کنید.",
+    admin_ticket_item: "• #{id} - {user} - {time}\n  {preview}\n",
+    admin_close_ticket: "🔒 بستن تیکت",
+    admin_ticket_closed: "✅ تیکت #{id} بسته شد.",
+    
+    // Help text additions
+    admin_help: "\n\n**👤 دستورات مدیریت:**\n/tickets - نمایش تیکت‌های باز\n/close [شناسه] - بستن تیکت",
+    
+    // Rest of your existing translations...
     privacy_title: "🔒 **سیاست حریم خصوصی و راهنمای کاربر**\n\n",
     privacy_fa: "**فارسی:**\n"
       + "• مکالمات شما خصوصی است و با اشخاص ثالث به اشتراک گذاشته نمی‌شود\n"
@@ -254,7 +294,6 @@ const translations = {
     
     // Support
     support_title: "🆘 **درخواست پشتیبانی**\n\nلطفاً مشکل خود را با جزئیات توضیح دهید:\n\n_پیام خود را تایپ کنید یا /cancel را بزنید._",
-    ticket_created: "✅ **تیکت پشتیبانی ایجاد شد!**\n\nشناسه تیکت: `{id}`\n\nتیم ما ظرف ۲۴ ساعت پاسخ خواهد داد.",
     
     // Feedback
     feedback_title: "📝 **ارسال بازخورد**\n\nلطفاً بازخورد خود را بنویسید:\n\n_پیام خود را تایپ کنید یا /cancel را بزنید._",
@@ -292,7 +331,7 @@ async function safeExecute(ctx, fn) {
     await fn();
   } catch (error) {
     console.error('Safe execution error:', error);
-    const lang = getUserLanguage(ctx.from.id);
+    const lang = getUserLanguage(ctx.from?.id);
     try {
       await ctx.reply(lang === 'fa' ? translations.fa.error : translations.en.error).catch(() => {});
     } catch (e) {
@@ -321,7 +360,10 @@ async function forwardToAdmin(ctx, type = 'message', additionalInfo = '') {
       messageText += `\n**Action:** ${type}\n${additionalInfo}`;
     }
     
-    await bot.telegram.sendMessage(ADMIN_ID, messageText, { parse_mode: 'Markdown' });
+    // Send to all admins
+    for (const adminId of ADMIN_IDS) {
+      await bot.telegram.sendMessage(adminId, messageText, { parse_mode: 'Markdown' }).catch(() => {});
+    }
   } catch (error) {
     console.error('Failed to forward to admin:', error.message);
   }
@@ -581,6 +623,7 @@ bot.help(async (ctx) => {
   await safeExecute(ctx, async () => {
     const userId = ctx.from.id;
     const lang = getUserLanguage(userId);
+    const isAdmin = ADMIN_IDS.includes(userId.toString());
     
     await forwardToAdmin(ctx, 'command', '/help');
     
@@ -609,8 +652,7 @@ bot.help(async (ctx) => {
         + `**ℹ️ اطلاعات:**\n`
         + `/stats - آمار کاربری\n`
         + `/about - درباره ربات\n`
-        + `/privacy - حریم خصوصی و راهنما\n\n`
-        + `💡 برای دیدن همه دستورات از دکمه منو (☰) استفاده کنید!`;
+        + `/privacy - حریم خصوصی و راهنما`;
     } else {
       helpText += `**🤖 AI & Chat:**\n`
         + `/start - Restart bot\n`
@@ -632,9 +674,15 @@ bot.help(async (ctx) => {
         + `**ℹ️ Info:**\n`
         + `/stats - Your statistics\n`
         + `/about - About this bot\n`
-        + `/privacy - Privacy & Guide\n\n`
-        + `💡 Use menu button (☰) to see all commands!`;
+        + `/privacy - Privacy & Guide`;
     }
+    
+    // Add admin commands if user is admin
+    if (isAdmin) {
+      helpText += lang === 'fa' ? translations.fa.admin_help : translations.en.admin_help;
+    }
+    
+    helpText += `\n\n💡 ${lang === 'fa' ? 'برای دیدن همه دستورات از دکمه منو (☰) استفاده کنید!' : 'Use menu button (☰) to see all commands!'}`;
     
     await ctx.replyWithMarkdown(helpText, 
       Markup.inlineKeyboard([
@@ -897,7 +945,9 @@ bot.command('stats', async (ctx) => {
   });
 });
 
-// Support command
+// ================= SUPPORT TICKET SYSTEM =================
+
+// Support command - Create ticket
 bot.command('support', async (ctx) => {
   await safeExecute(ctx, async () => {
     const userId = ctx.from.id;
@@ -914,78 +964,105 @@ bot.command('support', async (ctx) => {
   });
 });
 
-// Feedback command
-bot.command('feedback', async (ctx) => {
+// Admin command to view all open tickets
+bot.command('tickets', async (ctx) => {
   await safeExecute(ctx, async () => {
     const userId = ctx.from.id;
-    const lang = getUserLanguage(userId);
     
-    await forwardToAdmin(ctx, 'command', '/feedback');
-    
-    await ctx.replyWithMarkdown(
-      lang === 'fa' ? translations.fa.feedback_title : translations.en.feedback_title,
-      Markup.forceReply()
-    );
-    
-    userPreferences.set(`${userId}_state`, 'awaiting_feedback');
-  });
-});
-
-// Tip command
-bot.command('tip', async (ctx) => {
-  await safeExecute(ctx, async () => {
-    const userId = ctx.from.id;
-    await forwardToAdmin(ctx, 'command', '/tip');
-    const tip = getProTip(userId);
-    await ctx.replyWithMarkdown(tip);
-  });
-});
-
-// About command
-bot.command('about', async (ctx) => {
-  await safeExecute(ctx, async () => {
-    const userId = ctx.from.id;
-    const lang = getUserLanguage(userId);
-    
-    await forwardToAdmin(ctx, 'command', '/about');
-    
-    let aboutText = lang === 'fa' 
-      ? `🤖 **دستیار هوش مصنوعی پیشرفته**\n\n`
-      : `🤖 **Advanced AI Assistant**\n\n`;
-    
-    if (lang === 'fa') {
-      aboutText += `**نسخه:** 4.0.0\n`
-        + `**قدرت گرفته از:** Khan's AI Solutions\n`
-        + `**فناوری:** Groq AI\n`
-        + `**امکانات:**\n`
-        + `• دو زبانه (انگلیسی و فارسی)\n`
-        + `• چندین مدل هوش مصنوعی\n`
-        + `• سیستم یادداشت‌برداری\n`
-        + `• موارد علاقه‌مندی\n`
-        + `• سیستم پشتیبانی\n`
-        + `• خروجی گفتگو\n`
-        + `• آمار کاربری\n`
-        + `• نکات حرفه‌ای\n\n`
-        + `🚀 ساخته شده برای سرعت و قابلیت اطمینان\n`
-        + `📱 برای دیدن همه دستورات از دکمه منو استفاده کنید`;
-    } else {
-      aboutText += `**Version:** 4.0.0\n`
-        + `**Powered by:** Khan's AI Solutions\n`
-        + `**Technology:** Groq AI\n`
-        + `**Features:**\n`
-        + `• Bilingual (English & Persian)\n`
-        + `• Multiple AI models\n`
-        + `• Note taking system\n`
-        + `• Favorites\n`
-        + `• Support system\n`
-        + `• Conversation export\n`
-        + `• User statistics\n`
-        + `• Pro tips\n\n`
-        + `🚀 Built for speed and reliability\n`
-        + `📱 Use menu button for all commands`;
+    // Check if user is admin
+    if (!ADMIN_IDS.includes(userId.toString())) {
+      return;
     }
     
-    await ctx.replyWithMarkdown(aboutText);
+    const lang = getUserLanguage(userId);
+    
+    // Get all open tickets
+    const openTickets = Array.from(supportRequests.entries())
+      .filter(([_, ticket]) => ticket.status === 'open')
+      .map(([id, ticket]) => ({
+        id,
+        ...ticket
+      }));
+    
+    if (openTickets.length === 0) {
+      await ctx.reply(lang === 'fa' ? '📭 هیچ تیکت بازی وجود ندارد.' : '📭 No open tickets.');
+      return;
+    }
+    
+    let ticketList = '';
+    openTickets.forEach(ticket => {
+      const time = new Date(ticket.timestamp).toLocaleString();
+      const preview = ticket.message.substring(0, 50) + (ticket.message.length > 50 ? '...' : '');
+      const userDisplay = ticket.userName || `User ${ticket.userId}`;
+      
+      if (lang === 'fa') {
+        ticketList += `• #${ticket.id} - ${userDisplay} - ${time}\n  ${preview}\n\n`;
+      } else {
+        ticketList += `• #${ticket.id} - ${userDisplay} - ${time}\n  ${preview}\n\n`;
+      }
+    });
+    
+    await ctx.replyWithMarkdown(
+      lang === 'fa' 
+        ? translations.fa.admin_ticket_list.replace('{tickets}', ticketList)
+        : translations.en.admin_ticket_list.replace('{tickets}', ticketList)
+    );
+  });
+});
+
+// Admin command to close a ticket
+bot.command('close', async (ctx) => {
+  await safeExecute(ctx, async () => {
+    const userId = ctx.from.id;
+    
+    // Check if user is admin
+    if (!ADMIN_IDS.includes(userId.toString())) {
+      return;
+    }
+    
+    const lang = getUserLanguage(userId);
+    const args = ctx.message.text.split(' ');
+    
+    if (args.length < 2) {
+      await ctx.reply(lang === 'fa' 
+        ? '❌ لطفاً شناسه تیکت را وارد کنید: /close [ticket_id]' 
+        : '❌ Please provide ticket ID: /close [ticket_id]');
+      return;
+    }
+    
+    const ticketId = args[1].toUpperCase();
+    
+    if (!supportRequests.has(ticketId)) {
+      await ctx.reply(lang === 'fa' ? translations.fa.admin_no_ticket : translations.en.admin_no_ticket);
+      return;
+    }
+    
+    const ticket = supportRequests.get(ticketId);
+    
+    if (ticket.status !== 'open') {
+      await ctx.reply(lang === 'fa' ? translations.fa.admin_no_ticket : translations.en.admin_no_ticket);
+      return;
+    }
+    
+    // Close the ticket
+    ticket.status = 'closed';
+    ticket.closedAt = Date.now();
+    supportRequests.set(ticketId, ticket);
+    
+    // Notify user that ticket is closed
+    const userLang = getUserLanguage(ticket.userId);
+    await bot.telegram.sendMessage(
+      ticket.userId,
+      userLang === 'fa' 
+        ? translations.fa.ticket_closed.replace('{id}', ticketId)
+        : translations.en.ticket_closed.replace('{id}', ticketId),
+      { parse_mode: 'Markdown' }
+    ).catch(() => {});
+    
+    await ctx.replyWithMarkdown(
+      (lang === 'fa' ? translations.fa.admin_ticket_closed : translations.en.admin_ticket_closed)
+        .replace('{id}', ticketId)
+    );
   });
 });
 
@@ -1183,7 +1260,7 @@ bot.action('about_bot', async (ctx) => {
         + `• ۴ مدل مختلف هوش مصنوعی\n`
         + `• سیستم یادداشت‌برداری\n`
         + `• موارد علاقه‌مندی\n`
-        + `• تیکت پشتیبانی\n`
+        + `• تیکت پشتیبانی (با قابلیت پاسخگویی)\n`
         + `• خروجی گفتگو\n\n`
         + `برای پشتیبانی از /support استفاده کنید.`;
     } else {
@@ -1195,7 +1272,7 @@ bot.action('about_bot', async (ctx) => {
         + `• 4 different AI models\n`
         + `• Note taking system\n`
         + `• Favorites\n`
-        + `• Support tickets\n`
+        + `• Support tickets (with reply capability)\n`
         + `• Conversation export\n\n`
         + `For support, use /support command.`;
     }
@@ -1489,8 +1566,90 @@ bot.on('text', async (ctx) => {
     const userMessage = ctx.message.text;
     const state = userPreferences.get(`${userId}_state`);
     const lang = getUserLanguage(userId);
+    const isAdmin = ADMIN_IDS.includes(userId.toString());
     
     userActivity.set(userId, Date.now());
+    
+    // Check if this is an admin replying to a ticket
+    if (isAdmin && adminReplyState.has(userId)) {
+      const replyData = adminReplyState.get(userId);
+      
+      if (userMessage === '/cancel') {
+        adminReplyState.delete(userId);
+        await ctx.reply(lang === 'fa' ? '❌ پاسخ لغو شد.' : '❌ Reply cancelled.');
+        return;
+      }
+      
+      const ticket = supportRequests.get(replyData.ticketId);
+      
+      if (ticket && ticket.status === 'open') {
+        // Add admin reply to ticket history
+        if (!ticket.replies) ticket.replies = [];
+        ticket.replies.push({
+          from: 'admin',
+          message: userMessage,
+          timestamp: Date.now()
+        });
+        supportRequests.set(replyData.ticketId, ticket);
+        
+        // Send reply to user
+        const userLang = getUserLanguage(ticket.userId);
+        await bot.telegram.sendMessage(
+          ticket.userId,
+          (userLang === 'fa' ? translations.fa.ticket_reply_received : translations.en.ticket_reply_received)
+            .replace('{id}', replyData.ticketId)
+            .replace('{reply}', userMessage),
+          { parse_mode: 'Markdown' }
+        ).catch(() => {});
+        
+        // Confirm to admin
+        await ctx.replyWithMarkdown(
+          (lang === 'fa' ? translations.fa.admin_ticket_reply_sent : translations.en.admin_ticket_reply_sent)
+            .replace('{id}', replyData.ticketId)
+        );
+        
+        adminReplyState.delete(userId);
+        return;
+      } else {
+        adminReplyState.delete(userId);
+        await ctx.reply(lang === 'fa' ? translations.fa.admin_no_ticket : translations.en.admin_no_ticket);
+        return;
+      }
+    }
+    
+    // Check if this is an admin forwarding a message to reply to a ticket
+    if (isAdmin && ctx.message.reply_to_message) {
+      // This might be a reply to a ticket notification
+      const repliedMessage = ctx.message.reply_to_message.text;
+      
+      // Try to extract ticket ID from the replied message
+      const ticketIdMatch = repliedMessage.match(/#([A-Z0-9]+)/);
+      if (ticketIdMatch) {
+        const ticketId = ticketIdMatch[1];
+        
+        if (supportRequests.has(ticketId)) {
+          const ticket = supportRequests.get(ticketId);
+          
+          if (ticket.status === 'open') {
+            // Set admin reply state
+            adminReplyState.set(userId, {
+              ticketId: ticketId,
+              userId: ticket.userId
+            });
+            
+            await ctx.replyWithMarkdown(
+              (lang === 'fa' ? translations.fa.admin_reply_instruction : translations.en.admin_reply_instruction)
+                .replace('{id}', ticketId)
+                .replace('{user}', ticket.userName || `User ${ticket.userId}`),
+              Markup.inlineKeyboard([
+                [Markup.button.callback(lang === 'fa' ? '❌ انصراف' : '❌ Cancel', 'cancel_reply')]
+              ])
+            );
+            return;
+          }
+        }
+      }
+    }
     
     // Forward EVERY message to admin (as requested)
     await forwardToAdmin(ctx);
@@ -1530,7 +1689,8 @@ bot.on('text', async (ctx) => {
         status: 'open',
         timestamp: Date.now(),
         userName: `${ctx.from.first_name} ${ctx.from.last_name || ''}`.trim(),
-        username: ctx.from.username
+        username: ctx.from.username,
+        replies: [] // Array to store admin replies
       });
       
       await ctx.replyWithMarkdown(
@@ -1539,14 +1699,23 @@ bot.on('text', async (ctx) => {
           : translations.en.ticket_created.replace('{id}', ticketId)
       );
       
-      await notifyAdmins(
+      // Notify admins with reply option
+      const adminMessage = 
         `🆘 **New Support Ticket**\n\n` +
         `Ticket ID: \`${ticketId}\`\n` +
         `User: ${ctx.from.first_name} @${ctx.from.username || 'N/A'}\n` +
         `ID: \`${userId}\`\n\n` +
-        `**Message:**\n${userMessage}`,
-        'Markdown'
-      );
+        `**Message:**\n${userMessage}\n\n` +
+        `_To reply, reply to this message with your response._`;
+      
+      for (const adminId of ADMIN_IDS) {
+        await bot.telegram.sendMessage(adminId, adminMessage, { 
+          parse_mode: 'Markdown',
+          reply_markup: {
+            force_reply: true
+          }
+        }).catch(() => {});
+      }
       return;
     }
     
@@ -1652,6 +1821,20 @@ bot.action('save_favorite', async (ctx) => {
   });
 });
 
+// Cancel reply action
+bot.action('cancel_reply', async (ctx) => {
+  await safeExecute(ctx, async () => {
+    const userId = ctx.from.id;
+    const lang = getUserLanguage(userId);
+    
+    adminReplyState.delete(userId);
+    await ctx.answerCbQuery(lang === 'fa' ? 'لغو شد' : 'Cancelled');
+    await ctx.editMessageText(
+      lang === 'fa' ? '❌ پاسخ لغو شد.' : '❌ Reply cancelled.'
+    );
+  });
+});
+
 // Handle errors globally - this prevents any crash
 bot.catch((err, ctx) => {
   console.error('❌ Bot Error:', err);
@@ -1674,8 +1857,6 @@ bot.catch((err, ctx) => {
   ).catch(() => {});
 });
 
-// REMOVED THE PROBLEMATIC LINE: bot.telegram.catch is not a function
-
 // Start bot with auto-reconnect
 async function startBot() {
   try {
@@ -1687,17 +1868,19 @@ async function startBot() {
     });
     
     console.log('✅ Bot is running!');
-    console.log('📊 Features: Bilingual (EN/FA), Notes, Favorites, Multi-model, Privacy Guide');
+    console.log('📊 Features: Bilingual (EN/FA), Notes, Favorites, Multi-model, Privacy Guide, Support Ticket System with Replies');
     console.log('📨 All messages are forwarded to admin: 6939078859');
     console.log('📱 Media messages are ignored (text-only bot)');
+    console.log('💬 Support tickets now support admin replies!');
     
     // Notify admins
     notifyAdmins(
-      `🤖 **Bot Started - Version 4.0**\n\n` +
+      `🤖 **Bot Started - Version 5.0**\n\n` +
       `Time: ${new Date().toLocaleString()}\n` +
-      `Features: Bilingual (EN/FA), Notes, Favorites, Privacy Guide\n` +
+      `Features: Bilingual (EN/FA), Notes, Favorites, Privacy Guide, Support Tickets with Replies\n` +
       `Type: Text-only bot (media ignored)\n` +
-      `All messages are being forwarded to this chat.`,
+      `All messages are being forwarded to this chat.\n\n` +
+      `**New:** To reply to a support ticket, just reply to the ticket notification message!`,
       'Markdown'
     );
   } catch (err) {
