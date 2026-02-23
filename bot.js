@@ -23,8 +23,6 @@ const ADMIN_IDS = process.env.ADMIN_IDS ? process.env.ADMIN_IDS.split(',').map(i
 app.get('/', (req, res) => res.send('🤖 Bilingual AI Bot is running!'));
 app.get('/health', (req, res) => res.status(200).send('OK'));
 
-app.listen(PORT, '0.0.0.0', () => console.log(`✅ Server on port ${PORT}`));
-
 // In-memory storage (backward compatibility)
 const userConversations = new Map();
 const userPreferences = new Map(); // Stores language and model preferences
@@ -1543,20 +1541,33 @@ bot.catch((err, ctx) => {
   ).catch(() => {});
 });
 
-// Start bot with auto-reconnect
+// ================= WEBHOOK SETUP - FIX FOR 409 ERROR =================
+
+// Start bot with webhook mode (fixes 409 conflict error)
 async function startBot() {
   try {
     // Set default commands (English)
     await setBotCommands('en');
     
-    await bot.launch({
-      dropPendingUpdates: true
-    });
+    // IMPORTANT: Delete any existing webhook and clear pending updates
+    console.log('🔄 Deleting existing webhook...');
+    await bot.telegram.deleteWebhook({ drop_pending_updates: true });
     
-    console.log('✅ Bot is running!');
+    // Set the webhook URL (using your Render URL)
+    const webhookUrl = `https://talkmate-i979.onrender.com/webhook`;
+    await bot.telegram.setWebhook(webhookUrl);
+    
+    console.log(`✅ Webhook set to: ${webhookUrl}`);
+    
+    // Set up webhook middleware
+    app.use(bot.webhookCallback('/webhook'));
+    
+    // Start the server (already listening, but we need to confirm webhook is ready)
+    console.log('✅ Bot is running in webhook mode!');
     console.log('📊 Features: Bilingual (EN/FA), Notes, Favorites, Multi-model, Privacy Guide, Support Tickets');
     console.log('📱 Media messages are ignored (text-only bot)');
     console.log('💬 Database connected for admin bot');
+    console.log('🔗 Webhook mode active - 409 error fixed!');
     
     // Notify admins
     notifyAdmins(
@@ -1564,6 +1575,7 @@ async function startBot() {
       `Time: ${new Date().toLocaleString()}\n` +
       `Features: Bilingual (EN/FA), Notes, Favorites, Privacy Guide, Support Tickets\n` +
       `Type: Text-only bot (media ignored)\n` +
+      `Mode: Webhook (409 error fixed)\n` +
       `Database: Connected for admin bot`,
       'Markdown'
     );
