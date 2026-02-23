@@ -1031,7 +1031,7 @@ app.post('/api/broadcast', async (req, res) => {
 
 // Start server
 const server = app.listen(config.api.port, '0.0.0.0', () => {
-  logger.info(`✅ Server running on port ${config.api.port}`);
+  logger.info(`✅ Web server running on port ${config.api.port}`);
 });
 
 // ======================================================
