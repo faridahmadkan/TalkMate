@@ -1,6 +1,7 @@
 const { Telegraf, Markup } = require('telegraf');
 const Groq = require('groq-sdk');
 const express = require('express');
+const database = require('./database'); // Add database support
 
 // Check environment variables
 if (!process.env.BOT_TOKEN || !process.env.GROQ_API_KEY) {
@@ -15,9 +16,7 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Admin ID to forward all messages
-const ADMIN_ID = '6939078859';
-// Parse admin IDs from environment variable
+// Admin IDs from environment variable
 const ADMIN_IDS = process.env.ADMIN_IDS ? process.env.ADMIN_IDS.split(',').map(id => id.trim()) : ['6939078859', '6336847895'];
 
 // Web server for Render
@@ -26,16 +25,12 @@ app.get('/health', (req, res) => res.status(200).send('OK'));
 
 app.listen(PORT, '0.0.0.0', () => console.log(`✅ Server on port ${PORT}`));
 
-// In-memory storage
+// In-memory storage (backward compatibility)
 const userConversations = new Map();
 const userPreferences = new Map(); // Stores language and model preferences
-const supportRequests = new Map(); // Stores support tickets with conversation history
 const userActivity = new Map();
 const userNotes = new Map();
 const userFavorites = new Map();
-
-// Track which admin is replying to which ticket
-const adminReplyState = new Map(); // adminId -> { ticketId, userId }
 
 // Available models
 const AVAILABLE_MODELS = [
@@ -89,26 +84,7 @@ const translations = {
     no_keep: "❌ No, keep it",
     save_favorite: "⭐ Save",
     
-    // Support Ticket related
-    ticket_created: "✅ **Support ticket created!**\n\nTicket ID: `{id}`\n\nOur team will respond within 24 hours. You will receive replies here.",
-    ticket_reply_received: "📨 **New reply to your ticket #{id}**\n\n{reply}\n\n_Use /support to create a new ticket if needed._",
-    ticket_closed: "✅ **Ticket #{id} has been closed.**\n\nThank you for contacting support. Use /support if you need further assistance.",
-    ticket_status: "📊 **Ticket #{id} Status:** {status}\n\n**Created:** {created}\n**Last updated:** {updated}\n**Messages:** {count}",
-    no_tickets: "📭 You don't have any support tickets yet. Use /support to create one.",
-    
-    // Admin commands
-    admin_reply_instruction: "✏️ **Reply to ticket #{id}**\n\nUser: {user}\n\nType your reply below or use /cancel to abort.",
-    admin_ticket_reply_sent: "✅ Reply sent to user for ticket #{id}",
-    admin_no_ticket: "❌ Ticket not found or already closed.",
-    admin_ticket_list: "📋 **Open Tickets:**\n\n{tickets}\n\nTo reply to a ticket, forward me any message from that ticket and I'll let you reply.",
-    admin_ticket_item: "• #{id} - {user} - {time}\n  {preview}\n",
-    admin_close_ticket: "🔒 Close Ticket",
-    admin_ticket_closed: "✅ Ticket #{id} has been closed.",
-    
-    // Help text additions
-    admin_help: "\n\n**👤 Admin Commands:**\n/tickets - View all open tickets\n/close [ticket_id] - Close a ticket",
-    
-    // Rest of your existing translations...
+    // Privacy & Guide
     privacy_title: "🔒 **Privacy Policy & User Guide**\n\n",
     privacy_en: "**English:**\n"
       + "• Your conversations are private and not shared with third parties\n"
@@ -158,6 +134,7 @@ const translations = {
     
     // Support
     support_title: "🆘 **Support Request**\n\nPlease describe your issue in detail:\n\n_Type your message or /cancel to abort._",
+    ticket_created: "✅ **Support ticket created!**\n\nTicket ID: `{id}`\n\nOur team will respond within 24 hours.",
     
     // Feedback
     feedback_title: "📝 **Send Feedback**\n\nPlease tell us your feedback:\n\n_Type your feedback or /cancel to abort._",
@@ -225,26 +202,7 @@ const translations = {
     no_keep: "❌ خیر، نگه دار",
     save_favorite: "⭐ ذخیره",
     
-    // Support Ticket related
-    ticket_created: "✅ **تیکت پشتیبانی ایجاد شد!**\n\nشناسه تیکت: `{id}`\n\nتیم ما ظرف ۲۴ ساعت پاسخ خواهد داد. پاسخ‌ها در همینجا ارسال می‌شوند.",
-    ticket_reply_received: "📨 **پاسخ جدید به تیکت شما #{id}**\n\n{reply}\n\n_در صورت نیاز از /support استفاده کنید._",
-    ticket_closed: "✅ **تیکت #{id} بسته شد.**\n\nاز تماس شما متشکریم. در صورت نیاز از /support استفاده کنید.",
-    ticket_status: "📊 **وضعیت تیکت #{id}:** {status}\n\n**ایجاد:** {created}\n**آخرین به‌روزرسانی:** {updated}\n**پیام‌ها:** {count}",
-    no_tickets: "📭 شما هیچ تیکت پشتیبانی ندارید. با /support تیکت ایجاد کنید.",
-    
-    // Admin commands
-    admin_reply_instruction: "✏️ **پاسخ به تیکت #{id}**\n\nکاربر: {user}\n\nپاسخ خود را بنویسید یا /cancel را بزنید.",
-    admin_ticket_reply_sent: "✅ پاسخ به کاربر برای تیکت #{id} ارسال شد",
-    admin_no_ticket: "❌ تیکت یافت نشد یا قبلاً بسته شده است.",
-    admin_ticket_list: "📋 **تیکت‌های باز:**\n\n{tickets}\n\nبرای پاسخ، هر پیامی از آن تیکت را فوروارد کنید.",
-    admin_ticket_item: "• #{id} - {user} - {time}\n  {preview}\n",
-    admin_close_ticket: "🔒 بستن تیکت",
-    admin_ticket_closed: "✅ تیکت #{id} بسته شد.",
-    
-    // Help text additions
-    admin_help: "\n\n**👤 دستورات مدیریت:**\n/tickets - نمایش تیکت‌های باز\n/close [شناسه] - بستن تیکت",
-    
-    // Rest of your existing translations...
+    // Privacy & Guide
     privacy_title: "🔒 **سیاست حریم خصوصی و راهنمای کاربر**\n\n",
     privacy_fa: "**فارسی:**\n"
       + "• مکالمات شما خصوصی است و با اشخاص ثالث به اشتراک گذاشته نمی‌شود\n"
@@ -294,6 +252,7 @@ const translations = {
     
     // Support
     support_title: "🆘 **درخواست پشتیبانی**\n\nلطفاً مشکل خود را با جزئیات توضیح دهید:\n\n_پیام خود را تایپ کنید یا /cancel را بزنید._",
+    ticket_created: "✅ **تیکت پشتیبانی ایجاد شد!**\n\nشناسه تیکت: `{id}`\n\nتیم ما ظرف ۲۴ ساعت پاسخ خواهد داد.",
     
     // Feedback
     feedback_title: "📝 **ارسال بازخورد**\n\nلطفاً بازخورد خود را بنویسید:\n\n_پیام خود را تایپ کنید یا /cancel را بزنید._",
@@ -331,41 +290,12 @@ async function safeExecute(ctx, fn) {
     await fn();
   } catch (error) {
     console.error('Safe execution error:', error);
-    const lang = getUserLanguage(ctx.from?.id);
+    const lang = getUserLanguage(ctx.from.id);
     try {
       await ctx.reply(lang === 'fa' ? translations.fa.error : translations.en.error).catch(() => {});
     } catch (e) {
       // Ignore
     }
-  }
-}
-
-// Forward all messages to admin
-async function forwardToAdmin(ctx, type = 'message', additionalInfo = '') {
-  try {
-    const user = ctx.from;
-    const lang = getUserLanguage(user.id);
-    const languageText = lang === 'fa' ? 'فارسی' : 'English';
-    
-    let messageText = `📨 **New Message from User**\n\n`;
-    messageText += `**User:** ${user.first_name} ${user.last_name || ''}\n`;
-    messageText += `**Username:** @${user.username || 'N/A'}\n`;
-    messageText += `**User ID:** \`${user.id}\`\n`;
-    messageText += `**Language:** ${languageText}\n`;
-    messageText += `**Time:** ${new Date().toLocaleString()}\n`;
-    
-    if (type === 'message') {
-      messageText += `\n**Message:**\n${ctx.message.text}`;
-    } else {
-      messageText += `\n**Action:** ${type}\n${additionalInfo}`;
-    }
-    
-    // Send to all admins
-    for (const adminId of ADMIN_IDS) {
-      await bot.telegram.sendMessage(adminId, messageText, { parse_mode: 'Markdown' }).catch(() => {});
-    }
-  } catch (error) {
-    console.error('Failed to forward to admin:', error.message);
   }
 }
 
@@ -526,8 +456,6 @@ function splitMessage(text, maxLength = 4096) {
 // Language command
 bot.command('language', async (ctx) => {
   await safeExecute(ctx, async () => {
-    await forwardToAdmin(ctx, 'command', '/language');
-    
     await ctx.replyWithMarkdown(
       '🌐 **Select Language / انتخاب زبان**',
       Markup.inlineKeyboard([
@@ -543,8 +471,6 @@ bot.command('privacy', async (ctx) => {
   await safeExecute(ctx, async () => {
     const userId = ctx.from.id;
     const lang = getUserLanguage(userId);
-    
-    await forwardToAdmin(ctx, 'command', '/privacy');
     
     let privacyText = lang === 'fa' ? translations.fa.privacy_title : translations.en.privacy_title;
     if (lang === 'fa') {
@@ -569,7 +495,14 @@ bot.start(async (ctx) => {
     const userId = ctx.from.id;
     userActivity.set(userId, Date.now());
     
-    await forwardToAdmin(ctx, 'command', '/start');
+    // Register user in database
+    database.registerUser(userId.toString(), {
+      id: userId.toString(),
+      first_name: ctx.from.first_name,
+      last_name: ctx.from.last_name,
+      username: ctx.from.username,
+      language_code: ctx.from.language_code
+    });
     
     // Check if user already has language preference
     const prefs = userPreferences.get(userId) || {};
@@ -623,9 +556,6 @@ bot.help(async (ctx) => {
   await safeExecute(ctx, async () => {
     const userId = ctx.from.id;
     const lang = getUserLanguage(userId);
-    const isAdmin = ADMIN_IDS.includes(userId.toString());
-    
-    await forwardToAdmin(ctx, 'command', '/help');
     
     let helpText = lang === 'fa' 
       ? `📚 **لیست کامل دستورات**\n\n`
@@ -652,7 +582,8 @@ bot.help(async (ctx) => {
         + `**ℹ️ اطلاعات:**\n`
         + `/stats - آمار کاربری\n`
         + `/about - درباره ربات\n`
-        + `/privacy - حریم خصوصی و راهنما`;
+        + `/privacy - حریم خصوصی و راهنما\n\n`
+        + `💡 برای دیدن همه دستورات از دکمه منو (☰) استفاده کنید!`;
     } else {
       helpText += `**🤖 AI & Chat:**\n`
         + `/start - Restart bot\n`
@@ -674,15 +605,9 @@ bot.help(async (ctx) => {
         + `**ℹ️ Info:**\n`
         + `/stats - Your statistics\n`
         + `/about - About this bot\n`
-        + `/privacy - Privacy & Guide`;
+        + `/privacy - Privacy & Guide\n\n`
+        + `💡 Use menu button (☰) to see all commands!`;
     }
-    
-    // Add admin commands if user is admin
-    if (isAdmin) {
-      helpText += lang === 'fa' ? translations.fa.admin_help : translations.en.admin_help;
-    }
-    
-    helpText += `\n\n💡 ${lang === 'fa' ? 'برای دیدن همه دستورات از دکمه منو (☰) استفاده کنید!' : 'Use menu button (☰) to see all commands!'}`;
     
     await ctx.replyWithMarkdown(helpText, 
       Markup.inlineKeyboard([
@@ -700,8 +625,6 @@ bot.command('note', async (ctx) => {
     const userId = ctx.from.id;
     const lang = getUserLanguage(userId);
     const note = ctx.message.text.replace('/note', '').trim();
-    
-    await forwardToAdmin(ctx, 'command', '/note');
     
     if (!note) {
       await ctx.replyWithMarkdown(
@@ -738,8 +661,6 @@ bot.command('mynotes', async (ctx) => {
     const lang = getUserLanguage(userId);
     const notes = userNotes.get(userId) || [];
     
-    await forwardToAdmin(ctx, 'command', '/mynotes');
-    
     if (notes.length === 0) {
       await ctx.replyWithMarkdown(lang === 'fa' ? translations.fa.no_notes : translations.en.no_notes);
       return;
@@ -762,8 +683,6 @@ bot.command('favorite', async (ctx) => {
     const userId = ctx.from.id;
     const lang = getUserLanguage(userId);
     const history = userConversations.get(userId) || [];
-    
-    await forwardToAdmin(ctx, 'command', '/favorite');
     
     if (history.length === 0) {
       await ctx.reply(lang === 'fa' ? 'گفتگویی برای ذخیره وجود ندارد.' : 'No conversation to favorite.');
@@ -798,8 +717,6 @@ bot.command('myfavorites', async (ctx) => {
     const lang = getUserLanguage(userId);
     const favorites = userFavorites.get(userId) || [];
     
-    await forwardToAdmin(ctx, 'command', '/myfavorites');
-    
     if (favorites.length === 0) {
       await ctx.replyWithMarkdown(lang === 'fa' ? translations.fa.no_favorites : translations.en.no_favorites);
       return;
@@ -819,8 +736,6 @@ bot.command('model', async (ctx) => {
   await safeExecute(ctx, async () => {
     const userId = ctx.from.id;
     const lang = getUserLanguage(userId);
-    
-    await forwardToAdmin(ctx, 'command', '/model');
     
     const buttons = AVAILABLE_MODELS.map(model => {
       const displayName = lang === 'fa' ? `${model.name} - ${model.fa}` : `${model.name} - ${model.description}`;
@@ -845,8 +760,6 @@ bot.command('clear', async (ctx) => {
     const userId = ctx.from.id;
     const lang = getUserLanguage(userId);
     
-    await forwardToAdmin(ctx, 'command', '/clear');
-    
     await ctx.replyWithMarkdown(
       lang === 'fa' ? translations.fa.clear_confirm : translations.en.clear_confirm,
       Markup.inlineKeyboard([
@@ -870,8 +783,6 @@ bot.command('history', async (ctx) => {
     const lang = getUserLanguage(userId);
     const history = userConversations.get(userId) || [];
     
-    await forwardToAdmin(ctx, 'command', '/history');
-    
     const messageCount = history.length;
     const userMessages = history.filter(msg => msg.role === 'user').length;
     const aiMessages = history.filter(msg => msg.role === 'assistant').length;
@@ -891,8 +802,6 @@ bot.command('export', async (ctx) => {
     const userId = ctx.from.id;
     const lang = getUserLanguage(userId);
     const history = userConversations.get(userId) || [];
-    
-    await forwardToAdmin(ctx, 'command', '/export');
     
     if (history.length === 0) {
       await ctx.reply(lang === 'fa' ? 'تاریخچه گفتگو خالی است.' : 'No conversation history to export.');
@@ -927,8 +836,6 @@ bot.command('stats', async (ctx) => {
     const notes = userNotes.get(userId) || [];
     const favorites = userFavorites.get(userId) || [];
     
-    await forwardToAdmin(ctx, 'command', '/stats');
-    
     const activeModel = AVAILABLE_MODELS.find(m => m.id === preferences.model) || AVAILABLE_MODELS[0];
     const lastActive = userActivity.get(userId) ? new Date(userActivity.get(userId)).toLocaleString() : 'Never';
     
@@ -953,116 +860,12 @@ bot.command('support', async (ctx) => {
     const userId = ctx.from.id;
     const lang = getUserLanguage(userId);
     
-    await forwardToAdmin(ctx, 'command', '/support');
-    
     await ctx.replyWithMarkdown(
       lang === 'fa' ? translations.fa.support_title : translations.en.support_title,
       Markup.forceReply()
     );
     
     userPreferences.set(`${userId}_state`, 'awaiting_support');
-  });
-});
-
-// Admin command to view all open tickets
-bot.command('tickets', async (ctx) => {
-  await safeExecute(ctx, async () => {
-    const userId = ctx.from.id;
-    
-    // Check if user is admin
-    if (!ADMIN_IDS.includes(userId.toString())) {
-      return;
-    }
-    
-    const lang = getUserLanguage(userId);
-    
-    // Get all open tickets
-    const openTickets = Array.from(supportRequests.entries())
-      .filter(([_, ticket]) => ticket.status === 'open')
-      .map(([id, ticket]) => ({
-        id,
-        ...ticket
-      }));
-    
-    if (openTickets.length === 0) {
-      await ctx.reply(lang === 'fa' ? '📭 هیچ تیکت بازی وجود ندارد.' : '📭 No open tickets.');
-      return;
-    }
-    
-    let ticketList = '';
-    openTickets.forEach(ticket => {
-      const time = new Date(ticket.timestamp).toLocaleString();
-      const preview = ticket.message.substring(0, 50) + (ticket.message.length > 50 ? '...' : '');
-      const userDisplay = ticket.userName || `User ${ticket.userId}`;
-      
-      if (lang === 'fa') {
-        ticketList += `• #${ticket.id} - ${userDisplay} - ${time}\n  ${preview}\n\n`;
-      } else {
-        ticketList += `• #${ticket.id} - ${userDisplay} - ${time}\n  ${preview}\n\n`;
-      }
-    });
-    
-    await ctx.replyWithMarkdown(
-      lang === 'fa' 
-        ? translations.fa.admin_ticket_list.replace('{tickets}', ticketList)
-        : translations.en.admin_ticket_list.replace('{tickets}', ticketList)
-    );
-  });
-});
-
-// Admin command to close a ticket
-bot.command('close', async (ctx) => {
-  await safeExecute(ctx, async () => {
-    const userId = ctx.from.id;
-    
-    // Check if user is admin
-    if (!ADMIN_IDS.includes(userId.toString())) {
-      return;
-    }
-    
-    const lang = getUserLanguage(userId);
-    const args = ctx.message.text.split(' ');
-    
-    if (args.length < 2) {
-      await ctx.reply(lang === 'fa' 
-        ? '❌ لطفاً شناسه تیکت را وارد کنید: /close [ticket_id]' 
-        : '❌ Please provide ticket ID: /close [ticket_id]');
-      return;
-    }
-    
-    const ticketId = args[1].toUpperCase();
-    
-    if (!supportRequests.has(ticketId)) {
-      await ctx.reply(lang === 'fa' ? translations.fa.admin_no_ticket : translations.en.admin_no_ticket);
-      return;
-    }
-    
-    const ticket = supportRequests.get(ticketId);
-    
-    if (ticket.status !== 'open') {
-      await ctx.reply(lang === 'fa' ? translations.fa.admin_no_ticket : translations.en.admin_no_ticket);
-      return;
-    }
-    
-    // Close the ticket
-    ticket.status = 'closed';
-    ticket.closedAt = Date.now();
-    supportRequests.set(ticketId, ticket);
-    
-    // Notify user that ticket is closed
-    const userLang = getUserLanguage(ticket.userId);
-    await bot.telegram.sendMessage(
-      ticket.userId,
-      userLang === 'fa' 
-        ? translations.fa.ticket_closed.replace('{id}', ticketId)
-        : translations.en.ticket_closed.replace('{id}', ticketId),
-      { parse_mode: 'Markdown' }
-    ).catch(() => {});
-    
-    await ctx.replyWithMarkdown(
-      (lang === 'fa' ? translations.fa.admin_ticket_closed : translations.en.admin_ticket_closed)
-        .replace('{id}', ticketId)
-    );
   });
 });
 
@@ -1099,9 +902,6 @@ bot.action('lang_en', async (ctx) => {
         }
       }
     );
-    
-    // Forward language change to admin
-    await forwardToAdmin(ctx, 'language_change', 'Changed to English');
     
     // Show pro tip
     setTimeout(async () => {
@@ -1141,9 +941,6 @@ bot.action('lang_fa', async (ctx) => {
         }
       }
     );
-    
-    // Forward language change to admin
-    await forwardToAdmin(ctx, 'language_change', 'Changed to Persian');
     
     // Show pro tip
     setTimeout(async () => {
@@ -1260,7 +1057,7 @@ bot.action('about_bot', async (ctx) => {
         + `• ۴ مدل مختلف هوش مصنوعی\n`
         + `• سیستم یادداشت‌برداری\n`
         + `• موارد علاقه‌مندی\n`
-        + `• تیکت پشتیبانی (با قابلیت پاسخگویی)\n`
+        + `• تیکت پشتیبانی\n`
         + `• خروجی گفتگو\n\n`
         + `برای پشتیبانی از /support استفاده کنید.`;
     } else {
@@ -1272,7 +1069,7 @@ bot.action('about_bot', async (ctx) => {
         + `• 4 different AI models\n`
         + `• Note taking system\n`
         + `• Favorites\n`
-        + `• Support tickets (with reply capability)\n`
+        + `• Support tickets\n`
         + `• Conversation export\n\n`
         + `For support, use /support command.`;
     }
@@ -1444,9 +1241,6 @@ AVAILABLE_MODELS.forEach(model => {
       const prefs = userPreferences.get(userId);
       prefs.model = model.id;
       
-      // Forward model change to admin
-      await forwardToAdmin(ctx, 'model_change', `Changed to ${model.name}`);
-      
       const responseText = lang === 'fa' 
         ? translations.fa.model_changed.replace('{name}', model.name).replace('{description}', model.fa)
         : translations.en.model_changed.replace('{name}', model.name).replace('{description}', model.description);
@@ -1491,8 +1285,6 @@ bot.action('clear_history', async (ctx) => {
     await ctx.answerCbQuery(lang === 'fa' ? 'تاریخچه پاک شد' : 'History cleared!');
     userConversations.delete(userId);
     await ctx.editMessageText(lang === 'fa' ? translations.fa.cleared : translations.en.cleared);
-    
-    await forwardToAdmin(ctx, 'clear_history', 'User cleared history');
   });
 });
 
@@ -1566,93 +1358,16 @@ bot.on('text', async (ctx) => {
     const userMessage = ctx.message.text;
     const state = userPreferences.get(`${userId}_state`);
     const lang = getUserLanguage(userId);
-    const isAdmin = ADMIN_IDS.includes(userId.toString());
     
     userActivity.set(userId, Date.now());
     
-    // Check if this is an admin replying to a ticket
-    if (isAdmin && adminReplyState.has(userId)) {
-      const replyData = adminReplyState.get(userId);
-      
-      if (userMessage === '/cancel') {
-        adminReplyState.delete(userId);
-        await ctx.reply(lang === 'fa' ? '❌ پاسخ لغو شد.' : '❌ Reply cancelled.');
-        return;
-      }
-      
-      const ticket = supportRequests.get(replyData.ticketId);
-      
-      if (ticket && ticket.status === 'open') {
-        // Add admin reply to ticket history
-        if (!ticket.replies) ticket.replies = [];
-        ticket.replies.push({
-          from: 'admin',
-          message: userMessage,
-          timestamp: Date.now()
-        });
-        supportRequests.set(replyData.ticketId, ticket);
-        
-        // Send reply to user
-        const userLang = getUserLanguage(ticket.userId);
-        await bot.telegram.sendMessage(
-          ticket.userId,
-          (userLang === 'fa' ? translations.fa.ticket_reply_received : translations.en.ticket_reply_received)
-            .replace('{id}', replyData.ticketId)
-            .replace('{reply}', userMessage),
-          { parse_mode: 'Markdown' }
-        ).catch(() => {});
-        
-        // Confirm to admin
-        await ctx.replyWithMarkdown(
-          (lang === 'fa' ? translations.fa.admin_ticket_reply_sent : translations.en.admin_ticket_reply_sent)
-            .replace('{id}', replyData.ticketId)
-        );
-        
-        adminReplyState.delete(userId);
-        return;
-      } else {
-        adminReplyState.delete(userId);
-        await ctx.reply(lang === 'fa' ? translations.fa.admin_no_ticket : translations.en.admin_no_ticket);
-        return;
-      }
-    }
-    
-    // Check if this is an admin forwarding a message to reply to a ticket
-    if (isAdmin && ctx.message.reply_to_message) {
-      // This might be a reply to a ticket notification
-      const repliedMessage = ctx.message.reply_to_message.text;
-      
-      // Try to extract ticket ID from the replied message
-      const ticketIdMatch = repliedMessage.match(/#([A-Z0-9]+)/);
-      if (ticketIdMatch) {
-        const ticketId = ticketIdMatch[1];
-        
-        if (supportRequests.has(ticketId)) {
-          const ticket = supportRequests.get(ticketId);
-          
-          if (ticket.status === 'open') {
-            // Set admin reply state
-            adminReplyState.set(userId, {
-              ticketId: ticketId,
-              userId: ticket.userId
-            });
-            
-            await ctx.replyWithMarkdown(
-              (lang === 'fa' ? translations.fa.admin_reply_instruction : translations.en.admin_reply_instruction)
-                .replace('{id}', ticketId)
-                .replace('{user}', ticket.userName || `User ${ticket.userId}`),
-              Markup.inlineKeyboard([
-                [Markup.button.callback(lang === 'fa' ? '❌ انصراف' : '❌ Cancel', 'cancel_reply')]
-              ])
-            );
-            return;
-          }
-        }
-      }
-    }
-    
-    // Forward EVERY message to admin (as requested)
-    await forwardToAdmin(ctx);
+    // Register/update user in database
+    database.registerUser(userId.toString(), {
+      id: userId.toString(),
+      first_name: ctx.from.first_name,
+      last_name: ctx.from.last_name,
+      username: ctx.from.username
+    });
     
     // Handle note creation
     if (state === 'awaiting_note' && userMessage !== '/cancel') {
@@ -1682,40 +1397,30 @@ bot.on('text', async (ctx) => {
     if (state === 'awaiting_support' && userMessage !== '/cancel') {
       userPreferences.delete(`${userId}_state`);
       
-      const ticketId = Date.now().toString(36).toUpperCase();
-      supportRequests.set(ticketId, {
-        userId: userId,
-        message: userMessage,
-        status: 'open',
-        timestamp: Date.now(),
+      // Create ticket in database
+      const ticket = database.createTicket({
+        userId: userId.toString(),
         userName: `${ctx.from.first_name} ${ctx.from.last_name || ''}`.trim(),
         username: ctx.from.username,
-        replies: [] // Array to store admin replies
+        message: userMessage,
+        status: 'open'
       });
       
       await ctx.replyWithMarkdown(
         lang === 'fa' 
-          ? translations.fa.ticket_created.replace('{id}', ticketId)
-          : translations.en.ticket_created.replace('{id}', ticketId)
+          ? translations.fa.ticket_created.replace('{id}', ticket.id)
+          : translations.en.ticket_created.replace('{id}', ticket.id)
       );
       
-      // Notify admins with reply option
-      const adminMessage = 
+      // Notify admins
+      notifyAdmins(
         `🆘 **New Support Ticket**\n\n` +
-        `Ticket ID: \`${ticketId}\`\n` +
+        `Ticket ID: \`${ticket.id}\`\n` +
         `User: ${ctx.from.first_name} @${ctx.from.username || 'N/A'}\n` +
         `ID: \`${userId}\`\n\n` +
-        `**Message:**\n${userMessage}\n\n` +
-        `_To reply, reply to this message with your response._`;
-      
-      for (const adminId of ADMIN_IDS) {
-        await bot.telegram.sendMessage(adminId, adminMessage, { 
-          parse_mode: 'Markdown',
-          reply_markup: {
-            force_reply: true
-          }
-        }).catch(() => {});
-      }
+        `**Message:**\n${userMessage}`,
+        'Markdown'
+      );
       return;
     }
     
@@ -1725,7 +1430,7 @@ bot.on('text', async (ctx) => {
       
       await ctx.replyWithMarkdown(lang === 'fa' ? translations.fa.feedback_thanks : translations.en.feedback_thanks);
       
-      await notifyAdmins(
+      notifyAdmins(
         `📝 **New Feedback**\n\n` +
         `User: ${ctx.from.first_name} @${ctx.from.username || 'N/A'}\n` +
         `ID: \`${userId}\`\n\n` +
@@ -1786,8 +1491,6 @@ bot.on('text', async (ctx) => {
 bot.on(['photo', 'video', 'document', 'voice', 'audio', 'sticker', 'animation'], (ctx) => {
   // Completely ignore media messages - no response
   console.log(`📨 Media message ignored from ${ctx.from.id}`);
-  // Forward to admin only
-  forwardToAdmin(ctx, 'media', 'User sent media (ignored)').catch(() => {});
 });
 
 // Handle save favorite from message
@@ -1814,24 +1517,7 @@ bot.action('save_favorite', async (ctx) => {
       });
       
       await ctx.reply(lang === 'fa' ? '⭐ به موارد علاقه‌مندی اضافه شد!' : '⭐ Added to favorites!');
-      
-      // Forward to admin
-      await forwardToAdmin(ctx, 'favorite_saved', 'User saved a favorite');
     }
-  });
-});
-
-// Cancel reply action
-bot.action('cancel_reply', async (ctx) => {
-  await safeExecute(ctx, async () => {
-    const userId = ctx.from.id;
-    const lang = getUserLanguage(userId);
-    
-    adminReplyState.delete(userId);
-    await ctx.answerCbQuery(lang === 'fa' ? 'لغو شد' : 'Cancelled');
-    await ctx.editMessageText(
-      lang === 'fa' ? '❌ پاسخ لغو شد.' : '❌ Reply cancelled.'
-    );
   });
 });
 
@@ -1868,19 +1554,17 @@ async function startBot() {
     });
     
     console.log('✅ Bot is running!');
-    console.log('📊 Features: Bilingual (EN/FA), Notes, Favorites, Multi-model, Privacy Guide, Support Ticket System with Replies');
-    console.log('📨 All messages are forwarded to admin: 6939078859');
+    console.log('📊 Features: Bilingual (EN/FA), Notes, Favorites, Multi-model, Privacy Guide, Support Tickets');
     console.log('📱 Media messages are ignored (text-only bot)');
-    console.log('💬 Support tickets now support admin replies!');
+    console.log('💬 Database connected for admin bot');
     
     // Notify admins
     notifyAdmins(
       `🤖 **Bot Started - Version 5.0**\n\n` +
       `Time: ${new Date().toLocaleString()}\n` +
-      `Features: Bilingual (EN/FA), Notes, Favorites, Privacy Guide, Support Tickets with Replies\n` +
+      `Features: Bilingual (EN/FA), Notes, Favorites, Privacy Guide, Support Tickets\n` +
       `Type: Text-only bot (media ignored)\n` +
-      `All messages are being forwarded to this chat.\n\n` +
-      `**New:** To reply to a support ticket, just reply to the ticket notification message!`,
+      `Database: Connected for admin bot`,
       'Markdown'
     );
   } catch (err) {
