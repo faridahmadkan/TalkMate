@@ -1591,6 +1591,13 @@ async function startBot() {
 // Start the bot with retry mechanism
 startBot();
 
+// Keep the process alive
+process.stdin.resume();
+
+// Add a simple keep-alive message
+console.log(`🚀 Bot is ready and listening on port ${PORT}`);
+console.log(`⏰ ${new Date().toLocaleString()}`);
+
 // Graceful shutdown with cleanup
 process.once('SIGINT', () => {
   console.log('👋 Bot shutting down...');
