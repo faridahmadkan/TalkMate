@@ -4,19 +4,8 @@
  * ====================================================================
  * Version: 10.0.0
  * 
- * This bot represents the pinnacle of Telegram bot engineering with:
- * 
- * ✓ Neural AI Processing - Multiple AI models with context awareness
- * ✓ Quantum Database - Predictive, self-optimizing data storage
- * ✓ Emotional Intelligence - Sentiment analysis and empathetic responses
- * ✓ Predictive Analytics - Forecasts user behavior and trends
- * ✓ Intent Recognition - Understands user goals automatically
- * ✓ Topic Modeling - Extracts and tracks conversation topics
- * ✓ Smart Context - Maintains conversation state across sessions
- * ✓ Real-time Adaptation - Learns and improves from interactions
- * ✓ Zero-Knowledge Architecture - Privacy-first design
- * ✓ Enterprise Security - Military-grade encryption
- * 
+ * ✓ UptimeRobot Health Endpoints Included
+ * ✓ Stays Awake 24/7 on Render Free Tier
  * ====================================================================
  */
 
@@ -58,6 +47,39 @@ app.use(helmet());
 app.use(compression());
 app.use(express.json());
 
+// ======================================================
+// HEALTH CHECK ENDPOINTS (for uptime monitoring)
+// ======================================================
+
+// Ultra-lightweight endpoint for UptimeRobot (returns instantly)
+app.get('/health', (req, res) => {
+    res.status(200).send('⚡');
+});
+
+// Ping endpoint with basic status (also lightweight)
+app.get('/ping', (req, res) => {
+    res.status(200).json({
+        status: 'alive',
+        timestamp: Date.now(),
+        uptime: process.uptime()
+    });
+});
+
+// Status endpoint with more details (still lightweight)
+app.get('/status', (req, res) => {
+    res.status(200).json({
+        status: 'operational',
+        version: config.version,
+        name: config.name,
+        uptime: process.uptime(),
+        memory: process.memoryUsage().rss
+    });
+});
+
+// ======================================================
+// MAIN WEB INTERFACE
+// ======================================================
+
 app.get('/', (req, res) => {
     res.json({
         name: config.name,
@@ -66,14 +88,15 @@ app.get('/', (req, res) => {
         quantum: 'active',
         neural: 'online',
         uptime: process.uptime(),
+        monitoring: 'UptimeRobot ready',
         timestamp: new Date().toISOString()
     });
 });
 
-app.get('/health', (req, res) => res.status(200).send('⚡'));
-
 const server = app.listen(config.port, '0.0.0.0', () => {
     console.log(`🌐 Quantum Server: port ${config.port}`);
+    console.log(`📊 Health endpoints: /health, /ping, /status`);
+    console.log(`🔄 Ready for UptimeRobot monitoring`);
 });
 
 // ====================================================================
@@ -119,9 +142,9 @@ const UI = {
     // Favorites Menu
     favoritesMenu: (hasFavorites) => Markup.inlineKeyboard([
         [Markup.button.callback('📋 VIEW ALL', 'fav_view')],
-        [Markup.button.callback('🗑️ CLEAR', 'fav_clear')],
+        hasFavorites ? [Markup.button.callback('🗑️ CLEAR', 'fav_clear')] : [],
         [Markup.button.callback('🔙 BACK', 'menu_main')]
-    ]),
+    ].filter(row => row.length > 0)),
 
     // Support Menu
     supportMenu: Markup.inlineKeyboard([
@@ -148,7 +171,8 @@ const Messages = {
         `• Neural AI Processing with multiple models\n` +
         `• Emotional intelligence & sentiment analysis\n` +
         `• Predictive analytics & forecasting\n` +
-        `• Zero-knowledge architecture\n\n` +
+        `• Zero-knowledge architecture\n` +
+        `• 24/7 availability (UptimeRobot monitored)\n\n` +
         `✨ **Select an option below to begin your journey...**`,
 
     mainMenu: 
@@ -242,7 +266,8 @@ const Messages = {
             "💡 Save interesting responses to your quantum favorites!",
             "💡 The system learns from your interactions and improves over time!",
             "💡 Use /predict to see AI forecasts about your usage!",
-            "💡 Different models excel at different types of tasks!"
+            "💡 Different models excel at different types of tasks!",
+            "💡 Bot stays awake 24/7 thanks to UptimeRobot monitoring!"
         ];
         return tips[Math.floor(Math.random() * tips.length)];
     }
@@ -583,7 +608,7 @@ bot.on('text', async (ctx) => {
     const result = await neural.generateResponse(message, userId, model);
     
     if (result.success) {
-        const parts = this.splitMessage(result.response);
+        const parts = splitMessage(result.response);
         for (const part of parts) {
             await ctx.replyWithMarkdown(part, {
                 reply_markup: {
@@ -823,6 +848,19 @@ bot.command('backup', async (ctx) => {
 });
 
 // ====================================================================
+// UTILITY FUNCTIONS
+// ====================================================================
+
+function splitMessage(text, maxLength = 4096) {
+    if (text.length <= maxLength) return [text];
+    const parts = [];
+    for (let i = 0; i < text.length; i += maxLength) {
+        parts.push(text.substring(i, i + maxLength));
+    }
+    return parts;
+}
+
+// ====================================================================
 // ERROR HANDLING
 // ====================================================================
 
@@ -830,19 +868,6 @@ bot.catch((err, ctx) => {
     console.error('❌ Quantum Fluctuation:', err);
     ctx?.reply(Messages.error).catch(() => {});
 });
-
-// ====================================================================
-// UTILITY FUNCTIONS
-// ====================================================================
-
-bot.context.splitMessage = function(text, maxLength = 4096) {
-    if (text.length <= maxLength) return [text];
-    const parts = [];
-    for (let i = 0; i < text.length; i += maxLength) {
-        parts.push(text.substring(i, i + maxLength));
-    }
-    return parts;
-};
 
 // ====================================================================
 // LAUNCH THE QUANTUM NETWORK
@@ -854,6 +879,8 @@ bot.launch()
         console.log('🎯 Version:', config.version);
         console.log('👥 Admins:', config.admins.join(', '));
         console.log('🌐 Port:', config.port);
+        console.log('📊 Health endpoints: /health, /ping, /status');
+        console.log('🔄 UptimeRobot ready - bot will stay awake 24/7');
         console.log('\n⚡ QUANTUM NETWORK ACTIVE ⚡');
     })
     .catch(err => {
