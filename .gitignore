@@ -1,10 +1,23 @@
+# Dependencies
 node_modules/
+package-lock.json
+
+# Environment
 .env
 .env.local
 .env.production
-logs/
-data/
+
+# Data
+quantum-data/
 backups/
-*.log
-npm-debug.log*
+logs/
+
+# OS
 .DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
