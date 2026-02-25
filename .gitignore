@@ -8,7 +8,7 @@ package-lock.json
 .env.production
 
 # Data
-quantum-data/
+data/
 backups/
 logs/
 
@@ -21,3 +21,7 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Logs
+*.log
+npm-debug.log*
