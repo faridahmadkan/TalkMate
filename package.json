@@ -19,7 +19,6 @@
     "sentiment": "^5.0.2",
     "compromise": "^14.9.0",
     "franc": "^6.1.0",
-    "langdetect": "^4.0.0",
     "mathjs": "^11.11.0",
     "chart.js": "^4.4.0",
     "pdfkit": "^0.14.0",
